@@ -60,10 +60,10 @@ init([]) ->
     Shutdown = 2000,
     Type = worker,
 
-    AChild = {'AName', {'AModule', start_link, []},
-	      Restart, Shutdown, Type, ['AModule']},
+    Cell = {'gol_server', {'gol_server', start_link, []},
+	      Restart, Shutdown, Type, ['gol_server']},
 
-    {ok, {SupFlags, [AChild]}}.
+    {ok, {SupFlags, [Cell]}}.
 
 %%%===================================================================
 %%% Internal functions
