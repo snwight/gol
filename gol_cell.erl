@@ -43,14 +43,25 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
+-export([alive/1, dead/1, key/2]).
 
 -define(SERVER, ?MODULE). 
 
--record(state,{status=dead, loc=[], nbrs=[]}).
+-define(MIN_ROW, 1).
+-define(MIN_COL, 1).
+-define(MAX_ROW, 99).
+-define(MAX_COL, 99).
+
+-record(state,{status=dead, loc=undefined, nbrs=[]}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
+alive(Loc) -> 
+    gen_server:call({alive, Loc}).
+
+dead(Loc) -> 
+    gen_server:call({dead, Loc}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -61,11 +72,8 @@
 %%--------------------------------------------------------------------
 -spec start_link(any()) -> {ok, pid()}.
 start_link(Loc) ->
+    io:format("gol_cell:start_link( ~p )~n", [Loc]),
     gen_server:start_link({local, ?SERVER}, ?MODULE, Loc, []).
-
-set_status(Status) ->
-    gen_server:call().
-
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -82,11 +90,10 @@ set_status(Status) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
--spec init(non_neg_integer(), non_neg_integer()) -> {ok, any()}
 init([Row, Col]) ->
     Key = key(Row, Col),
     Nbrs = find_neighbors(Row, Col),
-    io:format("~p Pid: ~p~n", [Key, self()]),
+    io:format("~p: Nbrs ~p, Pid: ~p~n", [Key, Nbrs, self()]),
     {ok, #state{loc=Key, nbrs=Nbrs}}.
 
 key(Row, Col) -> lists:concat([Row,":", Col]).
@@ -116,9 +123,14 @@ find_neighbors(Row, Col) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(alive, _From, State) ->
+    {reply, ok, State=#state{status=alive}};
+handle_call(dead, _From, State) ->
+    {reply, ok, State=#state{status=dead}};
+handle_call(status, _From, State) ->
+    {reply, State#state.status, State};
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+    {reply, ok, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -143,17 +155,15 @@ handle_cast(_Msg, State) ->
 
 poll_neighbors(Nbrs) ->
     %% call the neighbors synchronously, collect results
-    lists:foldl(
-      fun(S, Sum) ->  S + Sum 
-      end, 0, 
-      lists:map(
-	fun(Pid) -> 
-		Pid ! status,
-		receive
-		    dead -> 0;
-		    alive -> 1
-		end
-	end, Nbrs)).
+    NbrState = lists:map(
+		 fun(Cell) -> 
+			 Status = gol_cell:call(Cell, status),
+			 case Status of
+			     dead -> 0;
+			     alive -> 1
+			 end
+		 end, Nbrs),
+    lists:foldl(fun(S, Sum) ->  S + Sum end, 0, NbrState).
 
 dead_or_alive(_Status, Sum) when Sum < 2 orelse Sum > 3 -> dead;
 dead_or_alive(_Status, 3) -> alive;

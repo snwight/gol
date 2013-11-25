@@ -3,7 +3,8 @@
 %%% @copyright (C) 2013, Stephen Wight
 %%% @doc
 %%%
-%%% Server that manages world grid cell assignments and seed state
+%%% Server that manages world grid cell assignments, cell creation,
+%%% and seed state
 %%%
 %%% @end
 %%% Created : 24 Nov 2013 by Stephen Wight <>
@@ -14,6 +15,8 @@
 
 %% API
 -export([start_link/0]).
+-export([seed/1]).
+-export([alive/1, dead/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -21,7 +24,12 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {}).
+-define(MIN_ROW, 1).
+-define(MIN_COL, 1).
+-define(MAX_ROW, 99).
+-define(MAX_COL, 99).
+
+-record(state, {worldgrid=[]}).
 
 %%%===================================================================
 %%% API
@@ -36,6 +44,9 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+seed(SeedSet) ->
+    lists:foreach(fun(L) -> alive(L) end, SeedSet).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -69,9 +80,11 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({establish_grid}, _From, State) ->
+    Grid = add_cells(?MAX_ROW, ?MAX_COL, []),
+    {reply, State#state{worldgrid=Grid}};
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+    {reply, ok, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -83,6 +96,10 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({alive, _Loc}, State) ->
+    {noreply, State};
+handle_cast({dead, _Loc}, State) ->
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
