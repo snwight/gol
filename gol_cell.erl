@@ -73,7 +73,7 @@ dead(Loc) ->
 -spec start_link(any()) -> {ok, pid()}.
 start_link([Row, Col]) ->
     io:format("gol_cell:start_link([~p, ~p])~n", [Row, Col]),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Row, Col], []).
+    gen_server:start_link(?MODULE, [Row, Col], []).
 
 %%%===================================================================
 %%% gen_server callbacks
