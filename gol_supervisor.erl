@@ -53,10 +53,10 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, {{one_for_all, 1000, 3600}, 
-	  {'gol_cell',
-	   {call, start_link, []},
-	   permanent, 2000, worker, ['gol_cell']}}}.
+    {ok, {{one_for_all, 1000, 3600},
+	  [{gol_cell, {gol_cell, start_link, [[5, 5]]},
+	    permanent, 2000, worker, 
+	    [gol_cell]}]}}.
 
 %%%===================================================================
 %%% Internal functions

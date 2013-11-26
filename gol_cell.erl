@@ -71,9 +71,9 @@ dead(Loc) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec start_link(any()) -> {ok, pid()}.
-start_link(Loc) ->
-    io:format("gol_cell:start_link( ~p )~n", [Loc]),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, Loc, []).
+start_link([Row, Col]) ->
+    io:format("gol_cell:start_link([~p, ~p)~n", [Row, Col]),
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Row, Col], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -108,6 +108,24 @@ find_neighbors(Row, Col) ->
     W = key(Row, Col - 1),
     NW = key(Row - 1, Col - 1),
     [N, NE, E, SE, S, SW, W, NW].
+
+poll_neighbors(Nbrs) ->
+    %% call the neighbors synchronously, collect results
+    NbrState = 
+	lists:map(
+	  fun(Cell) -> 
+		  Status = gol_cell:call(Cell, status),
+		  case Status of
+		      dead -> 0;
+		      alive -> 1
+		  end
+	  end, Nbrs),
+    lists:foldl(fun(S, Sum) ->  S + Sum end, 0, NbrState).
+
+dead_or_alive(_Status, Sum) when Sum < 2 orelse Sum > 3 -> dead;
+dead_or_alive(_Status, 3) -> alive;
+dead_or_alive(alive, 2) -> alive;
+dead_or_alive(dead, 2) -> dead.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -152,23 +170,6 @@ handle_cast(tick, #state{status=Status, loc=Loc, nbrs=Nbrs}) ->
     {noreply, #state{status=NewStatus, loc=Loc, nbrs=Nbrs}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
-
-poll_neighbors(Nbrs) ->
-    %% call the neighbors synchronously, collect results
-    NbrState = lists:map(
-		 fun(Cell) -> 
-			 Status = gol_cell:call(Cell, status),
-			 case Status of
-			     dead -> 0;
-			     alive -> 1
-			 end
-		 end, Nbrs),
-    lists:foldl(fun(S, Sum) ->  S + Sum end, 0, NbrState).
-
-dead_or_alive(_Status, Sum) when Sum < 2 orelse Sum > 3 -> dead;
-dead_or_alive(_Status, 3) -> alive;
-dead_or_alive(alive, 2) -> alive;
-dead_or_alive(dead, 2) -> dead.
 
 %%--------------------------------------------------------------------
 %% @private
