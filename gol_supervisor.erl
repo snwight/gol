@@ -11,8 +11,8 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
--export([add_cells/3]).
+-export([start_link/1]).
+-export([add_cells/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -32,8 +32,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    supervisor:start_link({local, gol_sup}, ?MODULE, []).
+start_link(Args) ->
+    supervisor:start_link({local, gol_sup}, ?MODULE, Args).
 
 %%%===================================================================
 %%% Supervisor callbacks
@@ -52,24 +52,30 @@ start_link() ->
 %%                     {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
-    {ok, {{one_for_all, 1000, 3600},
-	  [{gol_cell, {gol_cell, start_link, [[5, 5]]},
-	    permanent, 2000, worker, 
-	    [gol_cell]}]}}.
+init([Rows, Cols]) ->
+    GridSpecs = add_cells(Rows, Cols),
+    io:format("GridSpecs: ~p~n", [GridSpecs]),
+    {ok, {{one_for_one, 1000, 3600}, GridSpecs}}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-add_cells(1, _Col, Grid) ->
+add_cells(Rows, Cols) ->
+    add_cells_util(Rows, Cols, []).
+
+add_cells_util(1, _Col, Grid) ->
     Grid;
-add_cells(Row, Col, Grid) ->
+add_cells_util(Row, Col, Grid) ->
     R = add_row(Row, Col, Grid),
-    add_cells(Row - 1, Col, R).
+    add_cells_util(Row - 1, Col, R).
 
 add_row(_Row, 1, Grid) ->
     Grid;
 add_row(Row, Col, Grid) ->
     NewLoc = key(Row, Col),
-    supervisor:start_child(gol_sup, NewLoc),
-    add_row(Row, Col - 1, [NewLoc | Grid]).
+%%     Child = supervisor:start_child(gol_sup, [[Row,Col]]),
+%%     io:format("Child: ~p~n", [Child]),
+    NewCell = {NewLoc, 
+	       {gol_cell, start_link, [[Row,Col]]}, 
+	       permanent, brutal_kill, worker, [gol_cell]},
+    add_row(Row, Col - 1, [NewCell | Grid]).
