@@ -38,30 +38,26 @@
 %% API
 -export([start_link/1]).
 
--export([find_neighbors/2]).
+-export([live/1, die/1]).
+-export([status/1]).
+-export([key/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
--export([alive/1, dead/1, key/2]).
 
 -define(SERVER, ?MODULE). 
-
--define(MIN_ROW, 1).
--define(MIN_COL, 1).
--define(MAX_ROW, 99).
--define(MAX_COL, 99).
 
 -record(state,{status=dead, loc=undefined, nbrs=[]}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
-alive(Loc) -> 
-    gen_server:call({alive, Loc}).
+live(Loc) -> gen_server:call(?MODULE, {Loc, alive}).
 
-dead(Loc) -> 
-    gen_server:call({dead, Loc}).
+die(Loc) -> gen_server:call(?MODULE, {Loc, dead}).
+
+status(Loc) -> gen_server:call(?MODULE, {Loc, status}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -71,9 +67,8 @@ dead(Loc) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec start_link(any()) -> {ok, pid()}.
-start_link([Row, Col]) ->
-    io:format("gol_cell:start_link([~p, ~p])~n", [Row, Col]),
-    gen_server:start_link(?MODULE, [Row, Col], []).
+start_link(CellKey) ->
+    gen_server:start_link(?MODULE, [CellKey], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -90,42 +85,13 @@ start_link([Row, Col]) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Row, Col]) ->
-    Key = key(Row, Col),
-    Nbrs = find_neighbors(Row, Col),
+init([Key]) ->
+    {R, C} = 
+	lists:splitwith(fun(C) -> (C >= $0) and (C =< $9) end, Key),
+    Nbrs = find_neighbors(list_to_integer(R), 
+			  list_to_integer(lists:nthtail(1, C))),
     io:format("~p: Nbrs ~p, Pid: ~p~n", [Key, Nbrs, self()]),
     {ok, #state{loc=Key, nbrs=Nbrs}}.
-
-key(Row, Col) -> lists:concat([Row,":", Col]).
-
-find_neighbors(Row, Col) ->
-    N = key(Row - 1, Col),
-    NE = key(Row -1 , Col + 1),
-    E = key(Row, Col + 1),
-    SE = key(Row + 1, Col + 1),
-    S = key(Row + 1, Col),
-    SW = key(Row + 1, Col - 1),
-    W = key(Row, Col - 1),
-    NW = key(Row - 1, Col - 1),
-    [N, NE, E, SE, S, SW, W, NW].
-
-poll_neighbors(Nbrs) ->
-    %% call the neighbors synchronously, collect results
-    NbrState = 
-	lists:map(
-	  fun(Cell) -> 
-		  Status = gol_cell:call(Cell, status),
-		  case Status of
-		      dead -> 0;
-		      alive -> 1
-		  end
-	  end, Nbrs),
-    lists:foldl(fun(S, Sum) ->  S + Sum end, 0, NbrState).
-
-dead_or_alive(_Status, Sum) when Sum < 2 orelse Sum > 3 -> dead;
-dead_or_alive(_Status, 3) -> alive;
-dead_or_alive(alive, 2) -> alive;
-dead_or_alive(dead, 2) -> dead.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -141,12 +107,14 @@ dead_or_alive(dead, 2) -> dead.
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(alive, _From, State) ->
-    {reply, ok, State=#state{status=alive}};
-handle_call(dead, _From, State) ->
+handle_call(live, _From, State) ->
+    io:format("make ALIVE ~p~n", [Loc]),
+    S2 = State=#state{status=alive},
+    {reply, ok, S2};
+handle_call(die, _From, State) ->
     {reply, ok, State=#state{status=dead}};
 handle_call(status, _From, State) ->
-    {reply, State#state.status, State};
+    {reply, ok, State#state.status};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
@@ -212,3 +180,34 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+key(Row, Col) -> 
+    lists:concat([Row,":", Col]).
+
+find_neighbors(Row, Col) ->
+    N = key(Row - 1, Col),
+    NE = key(Row -1 , Col + 1),
+    E = key(Row, Col + 1),
+    SE = key(Row + 1, Col + 1),
+    S = key(Row + 1, Col),
+    SW = key(Row + 1, Col - 1),
+    W = key(Row, Col - 1),
+    NW = key(Row - 1, Col - 1),
+    [N, NE, E, SE, S, SW, W, NW].
+
+poll_neighbors(Nbrs) ->
+    %% call the neighbors synchronously, collect results
+    NbrState = 
+	lists:map(
+	  fun(Cell) -> 
+		  Status = gol_cell:call(Cell, status),
+		  case Status of
+		      dead -> 0;
+		      alive -> 1
+		  end
+	  end, Nbrs),
+    lists:foldl(fun(S, Sum) ->  S + Sum end, 0, NbrState).
+
+dead_or_alive(_Status, Sum) when Sum < 2 orelse Sum > 3 -> dead;
+dead_or_alive(_Status, 3) -> alive;
+dead_or_alive(alive, 2) -> alive;
+dead_or_alive(dead, 2) -> dead.

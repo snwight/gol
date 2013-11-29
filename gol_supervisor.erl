@@ -2,7 +2,7 @@
 %%% @author Stephen Wight <>
 %%% @copyright (C) 2013, Stephen Wight
 %%% @doc
-%%%
+%%%     Vanilla supervisor, just manages single gol_server instance. 
 %%% @end
 %%% Created : 24 Nov 2013 by Stephen Wight <>
 %%%-------------------------------------------------------------------
@@ -12,19 +12,13 @@
 
 %% API
 -export([start_link/0]).
--export([add_cells/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
 
--import(gol_cell, [key/2]).
-
--define(SERVER, ?MODULE).
-
 %%%===================================================================
 %%% API functions
 %%%===================================================================
-
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the supervisor
@@ -53,30 +47,8 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, {{simple_one_for_one, 0, 1},
-	  [{cell,
-	    {gol_cell, start_link, []}, 
-	    permanent, brutal_kill, worker, [gol_cell]}]}}.
-
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
-add_cells(Rows, Cols) ->
-    add_cells_util(Rows, Cols, []).
-
-add_cells_util(1, _Col, Grid) ->
-    Grid;
-add_cells_util(Row, Col, Grid) ->
-    R = add_row(Row, Col, Grid),
-    add_cells_util(Row - 1, Col, R).
-
-add_row(_Row, 1, Grid) ->
-    Grid;
-add_row(Row, Col, Grid) ->
-    NewLoc = key(Row, Col),
-%%     NewCell = {NewLoc, 
-%% 	       {gol_cell, start_link, [[Row,Col]]}, 
-%% 	       permanent, brutal_kill, worker, [gol_cell]},
-    Child = supervisor:start_child(gol_sup, [[Row,Col]]),
-    io:format("Child: ~p~n", [Child]),
-    add_row(Row, Col - 1, [NewLoc | Grid]).
+    io:format("supervisor init~n", []),
+    {ok, {{one_for_one, 1000, 3600},
+	  [{gol_server,
+	    {gol_server, start_link, [[4,5]]}, 
+	    permanent, brutal_kill, worker, [gol_server]}]}}.
