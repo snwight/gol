@@ -12,6 +12,7 @@
 
 %% API
 -export([start_link/1]).
+-export([seed/1]).
 -export([tick/0]).
 
 %% gen_server callbacks
@@ -25,7 +26,9 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-tick() -> gen_server:cast(gol_server,tick).
+seed(SeedSpec) -> gen_server:call(gol_server, {seed, SeedSpec}).
+
+tick() -> gen_server:cast(gol_server, tick).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -70,6 +73,13 @@ init([Rows, Cols]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({seed, SeedSpec}, _From, State) -> 
+    io:format("gol_server:handle_call seed ~p~n", [SeedSpec]),
+    lists:foreach(
+      fun(C) ->
+	      gen_server:call(C, live)
+      end, SeedSpec),
+    {reply, ok, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.

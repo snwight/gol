@@ -112,6 +112,7 @@ init(Cell) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call(live, _From, State) ->
+    io:format("gol_cell handle_call live~n", []),
     {reply, ok, State#state{status=alive}};
 handle_call(die, _From, State) ->
     {reply, ok, State#state{status=dead}};
@@ -142,9 +143,8 @@ tick_handler(State=#state{cell=Cell, nbrs=[]}) ->
     tick_handler(State#state{nbrs=find_neighbors(Cell)});
 tick_handler(State=#state{status=Status, nbrs=Nbrs}) -> 
     NbrSum = poll_neighbors(Nbrs),
-    io:format("NbrSum ~p, ~p~n", [NbrSum, Nbrs]),
-    NewStatus = dead_or_alive(Status, NbrSum),
-    State#state{status=NewStatus}.
+    io:format("NbrSum ~p~n", [NbrSum]),
+    State#state{status=dead_or_alive(Status, NbrSum)}.
 
 %%--------------------------------------------------------------------
 %% @private
