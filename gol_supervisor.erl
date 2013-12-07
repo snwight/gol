@@ -11,7 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -26,8 +26,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    supervisor:start_link({local, gol_sup}, ?MODULE, []).
+start_link(GridDimensions) ->
+    supervisor:start_link({local, gol_sup}, ?MODULE, [GridDimensions]).
 
 %%%===================================================================
 %%% Supervisor callbacks
@@ -46,9 +46,9 @@ start_link() ->
 %%                     {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
+init([GridDimensions]) ->
     io:format("supervisor init~n", []),
     {ok, {{one_for_one, 1000, 3600},
 	  [{gol_server,
-	    {gol_server, start_link, [[4,5]]}, 
+	    {gol_server, start_link, [GridDimensions]}, 
 	    permanent, brutal_kill, worker, [gol_server]}]}}.

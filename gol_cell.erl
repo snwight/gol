@@ -58,11 +58,11 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-live(Pid) -> gen_server:call(?MODULE, {Pid, live}).
+live(Pid) -> gen_server:call(Pid, live).
 
-die(Pid) -> gen_server:call(?MODULE, {Pid, die}).
+die(Pid) -> gen_server:call(Pid, die).
 
-status(Pid) -> gen_server:call(?MODULE, {Pid, status}).
+status(Pid) -> gen_server:call(Pid, status).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -142,7 +142,9 @@ tick_handler(State=#state{cell=Cell, nbrs=[]}) ->
     tick_handler(State#state{nbrs=find_neighbors(Cell)});
 tick_handler(State=#state{status=Status, nbrs=Nbrs}) -> 
     NbrSum = poll_neighbors(Nbrs),
-    State#state{status=dead_or_alive(Status, NbrSum)}.
+    io:format("NbrSum ~p, ~p~n", [NbrSum, Nbrs]),
+    NewStatus = dead_or_alive(Status, NbrSum),
+    State#state{status=NewStatus}.
 
 %%--------------------------------------------------------------------
 %% @private

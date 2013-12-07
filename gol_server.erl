@@ -87,9 +87,8 @@ handle_call(_Request, _From, State) ->
 handle_cast(tick, State) ->
     io:format("gol_server:handle_cast tick ~p~n", [State]),
     lists:foreach(
-      fun(C) -> 
-	      %% gen_server:cast(C, tick) 
-	      gen_server:cast(C, status) 
+      fun(C) ->
+	      gen_server:cast(C, tick)
       end, State#state.grid),
     {noreply, State};
 handle_cast(_Msg, State) ->
