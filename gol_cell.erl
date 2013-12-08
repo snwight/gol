@@ -38,10 +38,10 @@
 %% API
 -export([start_link/1]).
 
-%% write
--export([live/1, die/1]).
+%% update
+-export([live/1, die/1, tick/1]).
 
-%% read
+%% query
 -export([status/1]).
 
 % utility
@@ -58,11 +58,13 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-live(Pid) -> gen_server:call(Pid, live).
+live(Cell) -> gen_server:call(Cell, live).
 
-die(Pid) -> gen_server:call(Pid, die).
+die(Cell) -> gen_server:call(Cell, die).
 
-status(Pid) -> gen_server:call(Pid, status).
+status(Cell) -> gen_server:call(Cell, status).
+
+tick(Cell) -> gen_server:call(Cell, tick).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -111,15 +113,15 @@ init(Cell) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(live, _From, State) ->
-    io:format("gol_cell handle_call live~n", []),
-    {reply, ok, State#state{status=alive}};
-handle_call(die, _From, State) ->
-    {reply, ok, State#state{status=dead}};
-handle_call(status, _From, State) ->
-    {reply, State#state.status, State};
-handle_call(_Request, _From, State) ->
-    {reply, ok, State}.
+handle_call(tick, _From, State) ->
+    NbrSum = poll_neighbors(State#state.nbrs),
+    io:format("NbrSum ~p~n", [NbrSum]),
+    NewStatus = dead_or_alive(State#state.status, NbrSum),
+    {reply, ok, State#state{status=NewStatus}};
+handle_call(live, _From, State)     -> {reply, ok, State#state{status=alive}};
+handle_call(die, _From, State)      -> {reply, ok, State#state{status=dead}};
+handle_call(status, _From, State)   -> {reply, State#state.status, State};
+handle_call(_Request, _From, State) -> {reply, ok, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -134,17 +136,7 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(tick, State) ->
-    {noreply, tick_handler(State)};
-handle_cast(_Msg, State) ->
-    {noreply, State}.
-
-tick_handler(State=#state{cell=Cell, nbrs=[]}) ->
-    tick_handler(State#state{nbrs=find_neighbors(Cell)});
-tick_handler(State=#state{status=Status, nbrs=Nbrs}) -> 
-    NbrSum = poll_neighbors(Nbrs),
-    io:format("NbrSum ~p~n", [NbrSum]),
-    State#state{status=dead_or_alive(Status, NbrSum)}.
+handle_cast(_Msg, State) -> {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -156,8 +148,7 @@ tick_handler(State=#state{status=Status, nbrs=Nbrs}) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info(_Info, State) -> {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -170,8 +161,7 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
-    ok.
+terminate(_Reason, _State) -> ok.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -181,8 +171,7 @@ terminate(_Reason, _State) ->
 %% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
 %% @end
 %%--------------------------------------------------------------------
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %%%===================================================================
 %%% Internal functions
@@ -198,16 +187,23 @@ find_neighbors({Row, Col}) ->
     SW = key({Row + 1, Col - 1}),
     W = key({Row, Col - 1}),
     NW = key({Row - 1, Col - 1}),
-    lists:map(fun(C) -> whereis(C) end, [N, NE, E, SE, S, SW, W, NW]).
+    lists:map(
+      fun(C) -> 
+	      case whereis(C) of
+		  undefined -> undefined;
+		  _ -> C
+	      end
+      end, [N, NE, E, SE, S, SW, W, NW]).
 
 poll_neighbors(Nbrs) ->
-    %% call the neighbors synchronously, collect results
     NbrState = 
 	lists:map(
 	  fun
 	      (undefined) -> 0;
 	      (C) -> 
-		  case status(C) of
+		  S = status(C),
+		  io:format("poll_neighbors ~p ~p~n", [C, S]),
+		  case S of
 		      dead -> 0;
 		      alive -> 1
 		  end

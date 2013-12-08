@@ -21,7 +21,7 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {grid=[]}).
+-record(state, {rows=0, cols=0, grid=[]}).
 
 %%%===================================================================
 %%% API
@@ -56,8 +56,7 @@ start_link(GridDimensions) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Rows, Cols]) ->
-    Grid = add_cells(Rows, Cols, []),
-    {ok, #state{grid = Grid}}.
+    {ok, #state{rows=Rows, cols=Cols, grid=add_cells(Rows, Cols, [])}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -77,12 +76,10 @@ handle_call({seed, SeedSpec}, _From, State) ->
     io:format("gol_server:handle_call seed ~p~n", [SeedSpec]),
     lists:foreach(
       fun(C) ->
-	      gen_server:call(C, live)
+	      gol_cell:live(C)
       end, SeedSpec),
     {reply, ok, State};
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+handle_call(_Request, _From, State) -> {reply, ok, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -98,7 +95,7 @@ handle_cast(tick, State) ->
     io:format("gol_server:handle_cast tick ~p~n", [State]),
     lists:foreach(
       fun(C) ->
-	      gen_server:cast(C, tick)
+	      gol_cell:tick(C)
       end, State#state.grid),
     {noreply, State};
 handle_cast(_Msg, State) ->
@@ -114,8 +111,7 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info(_Info, State) -> {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -128,8 +124,7 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
-    ok.
+terminate(_Reason, _State) -> ok.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -139,20 +134,16 @@ terminate(_Reason, _State) ->
 %% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
 %% @end
 %%--------------------------------------------------------------------
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-add_cells(0, _Col, Grid) ->
-    io:format("add_cells: ~p~n", [Grid]),
-    Grid;
-add_cells(Row, Col, Grid) ->
+add_cells(0, _Col, Grid) -> Grid;
+add_cells(Row, Col, Grid) -> 
     add_cells(Row - 1, Col, add_row(Row, Col, Grid)).
 
-add_row(_Row, 0, Grid) ->
-    Grid;
+add_row(_Row, 0, Grid) -> Grid;
 add_row(Row, Col, Grid) ->
     gol_cell:start_link({Row, Col}),
     add_row(Row, Col - 1, [gol_cell:key({Row, Col}) | Grid]).
