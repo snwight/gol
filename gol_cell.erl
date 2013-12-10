@@ -23,7 +23,7 @@
 -export([start_link/1]).
 
 %% update
--export([live/1, die/1, tick/1]).
+-export([live/1, die/1, predict/1, tick/1]).
 
 %% query
 -export([status/1]).
@@ -38,7 +38,8 @@
 -define(SERVER, ?MODULE). 
 
 -record(state, { 
-	  status = dead :: 'alive' | 'dead', 
+	  status = dead :: 'alive' | 'dead',
+	  pending = dead :: 'alive' | 'dead',
 	  cell = {} :: tuple( integer(), integer() ), 
 	  nbrs = {} :: tuple( atom(), atom(), atom(), atom(),
 			     atom(), atom(), atom(), atom() )
@@ -59,6 +60,9 @@ status(CellKey) -> gen_server:call(CellKey, status).
 -spec tick(atom()) -> 'dead' | 'alive'.
 tick(CellKey) -> gen_server:call(CellKey, tick).
 
+-spec predict(atom()) -> ok.
+predict(CellKey) -> gen_server:call(CellKey, predict).
+
 -spec start_link(tuple()) -> {ok, pid()}.
 start_link(Cell) ->
     gen_server:start_link({local, key(Cell)}, ?MODULE, Cell, []).
@@ -68,10 +72,18 @@ start_link(Cell) ->
 %%%===================================================================
 init(Cell) -> {ok, #state{cell=Cell, nbrs=find_neighbors(Cell)}}.
 
-handle_call(tick, _From, State) ->
+handle_call(predict, _From, State) ->
     NbrSum = poll_neighbors(State#state.nbrs),
     NewStatus = dead_or_alive(State#state.status, NbrSum),
-    {reply, NewStatus, State#state{status=NewStatus}};
+    {reply, ok, State#state{pending=NewStatus}};
+handle_call(tick, _From, State) ->
+    case State#state.pending == State#state.status of
+	false -> 
+	    io:format("pending ~p, status ~p~n", 
+		      [State#state.pending, State#state.status]);
+	_ -> ok
+    end,
+    {reply, State#state.pending, State#state{status=State#state.pending}};
 handle_call(live, _From, State)     -> {reply, ok, State#state{status=alive}};
 handle_call(die, _From, State)      -> {reply, ok, State#state{status=dead}};
 handle_call(status, _From, State)   -> {reply, State#state.status, State};

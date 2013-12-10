@@ -70,12 +70,10 @@ handle_call({seed, SeedSpec}, _From, State) ->
 handle_call(_Request, _From, State) -> {reply, ok, State}.
 
 handle_cast(tick, State) ->
-    DisplayList = 
-	lists:map(
-	  fun(C) ->
-		  gol_cell:tick(C) 
-	  end, State#state.grid),
-    display_grid(DisplayList, State#state.cols),
+    %% two-phase state change here to clumsily mimic global synchronicity
+    lists:foreach(fun(C) -> gol_cell:predict(C) end, State#state.grid),
+    DL = lists:map(fun(C) -> gol_cell:tick(C) end, State#state.grid),
+    display_grid(DL, State#state.cols),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -108,5 +106,5 @@ display_grid(DisplayList, Cols) ->
 		       alive -> "@"
 		   end
 	   end, DisplayList),
-    io:format("\f~p~n", [lists:concat(lists:sublist(PL, Cols))]),
+    io:format("~p~n", [lists:concat(lists:sublist(PL, Cols))]),
     display_grid(lists:nthtail(Cols, DisplayList), Cols).
