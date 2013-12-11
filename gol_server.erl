@@ -20,7 +20,7 @@
 
 %% API
 -export([start_link/1]).
--export([seed/1, tick/0, run/1, display/0]).
+-export([seed/1, tick/0, run/1, display/0, clear/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -46,11 +46,14 @@ tick() -> gen_server:cast(gol_server, tick).
 -spec display() -> ok.
 display() -> gen_server:cast(gol_server, display).
 
+-spec clear() -> ok.
+clear() -> gen_server:cast(gol_server, clear).
+
 -spec run(integer()) -> ok.
 run(0) -> ok;
 run(NumCycles) when NumCycles > 0 -> 
     tick(),
-    timer:sleep(3600),
+    timer:sleep(1000),
     run(NumCycles - 1).
 
 start_link(GridDims) ->
@@ -80,7 +83,10 @@ handle_cast(display, State) ->
     DL = lists:map(fun(C) -> gol_cell:status(C) end, State#state.grid),
     display_grid(DL, State#state.cols),
     {noreply, State};
-    
+handle_cast(clear, State) ->
+    DL = lists:map(fun(C) -> gol_cell:die(C), dead end, State#state.grid),
+    display_grid(DL, State#state.cols),
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
