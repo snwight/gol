@@ -23,7 +23,7 @@
 -export([start_link/1]).
 
 %% update
--export([live/1, die/1, predict/1, tick/1]).
+-export([live/1, die/1, find_neighbors/1, predict/1, tick/1]).
 
 %% query
 -export([status/1]).
@@ -57,11 +57,14 @@ die(CellKey) -> gen_server:call(CellKey, die).
 -spec status(atom()) -> 'dead' | 'alive'.
 status(CellKey) -> gen_server:call(CellKey, status).
 
--spec tick(atom()) -> 'dead' | 'alive'.
-tick(CellKey) -> gen_server:call(CellKey, tick).
-
+-spec find_neighbors(atom()) -> ok.
+find_neighbors(Cell) -> gen_server:call(Cell, find_neighbors).
+    
 -spec predict(atom()) -> ok.
 predict(CellKey) -> gen_server:call(CellKey, predict).
+
+-spec tick(atom()) -> 'dead' | 'alive'.
+tick(CellKey) -> gen_server:call(CellKey, tick).
 
 -spec start_link(tuple()) -> {ok, pid()}.
 start_link(Cell) ->
@@ -70,19 +73,32 @@ start_link(Cell) ->
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
-init(Cell) -> {ok, #state{cell=Cell, nbrs=find_neighbors(Cell)}}.
+init(Cell) -> {ok, #state{cell=Cell}}.
 
+handle_call(find_neighbors, _From, State) ->
+    {Row, Col} = State#state.cell,
+    N = key({Row - 1, Col}),
+    NE = key({Row - 1 , Col + 1}),
+    E = key({Row, Col + 1}),
+    SE = key({Row + 1, Col + 1}),
+    S = key({Row + 1, Col}),
+    SW = key({Row + 1, Col - 1}),
+    W = key({Row, Col - 1}),
+    NW = key({Row - 1, Col - 1}),
+    Nbrs = 
+	lists:map(
+	  fun(C) -> 
+		  case whereis(C) of
+		      undefined -> undefined;
+		      _ -> C
+		  end
+	  end, [N, NE, E, SE, S, SW, W, NW]),
+    {reply, ok, State#state{nbrs=Nbrs}};
 handle_call(predict, _From, State) ->
     NbrSum = poll_neighbors(State#state.nbrs),
     NewStatus = dead_or_alive(State#state.status, NbrSum),
     {reply, ok, State#state{pending=NewStatus}};
 handle_call(tick, _From, State) ->
-    case State#state.pending == State#state.status of
-	false -> 
-	    io:format("pending ~p, status ~p~n", 
-		      [State#state.pending, State#state.status]);
-	_ -> ok
-    end,
     {reply, State#state.pending, State#state{status=State#state.pending}};
 handle_call(live, _From, State)     -> {reply, ok, State#state{status=alive}};
 handle_call(die, _From, State)      -> {reply, ok, State#state{status=dead}};
@@ -100,30 +116,11 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 -spec key(tuple()) -> atom().
 key({Row, Col}) -> list_to_atom(lists:concat([Row, ":", Col])).
 
--spec find_neighbors(tuple()) -> list().
-find_neighbors({Row, Col}) ->
-    N = key({Row - 1, Col}),
-    NE = key({Row - 1 , Col + 1}),
-    E = key({Row, Col + 1}),
-    SE = key({Row + 1, Col + 1}),
-    S = key({Row + 1, Col}),
-    SW = key({Row + 1, Col - 1}),
-    W = key({Row, Col - 1}),
-    NW = key({Row - 1, Col - 1}),
-    lists:map(
-      fun(C) -> 
-	      case whereis(C) of
-		  undefined -> undefined;
-		  _ -> C
-	      end
-      end, [N, NE, E, SE, S, SW, W, NW]).
-
--spec poll_neighbors(list()) -> integer().
+-spec poll_neighbors(record()) -> integer().
 poll_neighbors(Nbrs) ->
     NbrState = 
 	lists:map(
-	  fun
-	      (undefined) -> 0;
+	  fun (undefined) -> 0;
 	      (C) -> 
 		  case status(C) of
 		      dead -> 0;
@@ -133,6 +130,6 @@ poll_neighbors(Nbrs) ->
     lists:foldl(fun(S, Sum) -> S + Sum end, 0, NbrState).
 
 -spec dead_or_alive(integer(), integer()) -> 'dead' | 'alive'.
+dead_or_alive(alive, Sum) when Sum < 2 orelse Sum > 3 -> dead;
 dead_or_alive(_Status, 3) -> alive;
-dead_or_alive(Status, 2) -> Status;
-dead_or_alive(_Status, Sum) when Sum < 2 orelse Sum > 3 -> dead.
+dead_or_alive(Status, _Sum) -> Status.

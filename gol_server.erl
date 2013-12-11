@@ -20,7 +20,7 @@
 
 %% API
 -export([start_link/1]).
--export([seed/1, tick/0, run/1]).
+-export([seed/1, tick/0, run/1, display/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -41,8 +41,10 @@ seed(SeedSpec) ->
     gen_server:call(gol_server, {seed, SeedSpec}).
 
 -spec tick() -> ok.
-tick() -> 
-    gen_server:cast(gol_server, tick).
+tick() -> gen_server:cast(gol_server, tick).
+
+-spec display() -> ok.
+display() -> gen_server:cast(gol_server, display).
 
 -spec run(integer()) -> ok.
 run(0) -> ok;
@@ -58,14 +60,13 @@ start_link(GridDims) ->
 %%% gen_server callbacks
 %%%===================================================================
 init([Rows, Cols]) ->
-    {ok, #state{rows=Rows, cols=Cols, grid=add_cells(Rows, Cols, [])}}.
+    Grid = add_cells(Rows, Cols, []),
+    lists:foreach(fun(C) -> gol_cell:find_neighbors(C) end, Grid),
+    {ok, #state{rows=Rows, cols=Cols, grid=Grid}}.
 
 handle_call({seed, SeedSpec}, _From, State) -> 
     io:format("gol_server:handle_call seed ~p~n", [SeedSpec]),
-    lists:foreach(
-      fun(C) ->
-	      gol_cell:live(C)
-      end, SeedSpec),
+    lists:foreach(fun(C) -> gol_cell:live(C) end, SeedSpec),
     {reply, ok, State};
 handle_call(_Request, _From, State) -> {reply, ok, State}.
 
@@ -75,6 +76,11 @@ handle_cast(tick, State) ->
     DL = lists:map(fun(C) -> gol_cell:tick(C) end, State#state.grid),
     display_grid(DL, State#state.cols),
     {noreply, State};
+handle_cast(display, State) ->
+    DL = lists:map(fun(C) -> gol_cell:status(C) end, State#state.grid),
+    display_grid(DL, State#state.cols),
+    {noreply, State};
+    
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -102,7 +108,7 @@ display_grid(DisplayList, Cols) ->
     PL = lists:map(
 	   fun(S) ->
 		   case S of
-		       dead -> " ";
+		       dead -> ".";
 		       alive -> "@"
 		   end
 	   end, DisplayList),
