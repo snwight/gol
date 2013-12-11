@@ -10,30 +10,37 @@ Comprised of four erlang modules:
 
 Run in erlang shell:
 
->>> gol_app:start(normal, [{ RowCount, ColumnCount }]).
+gol_app:start(normal, [{ RowCount, ColumnCount }]).
+
     ...where RowCount is width of the 'world grid', ColumnCount is the height
 
->>> gol_server:seed([ CellKey1, CellKey2, CellKey3, ...CellKeyN ]).
+gol_server:seed([ CellKey1, CellKey2, CellKey3, ...CellKeyN ]).
+
     ...where CellKey is an atom in the following pattern:  'Row:Col' 
     ...see example seed sets below
 
->>> gol_server:display().
+gol_server:display().
+
     ...prints current state of the world grid
 
->>> gol_server:clear().
+gol_server:clear().
+
     ...empties and displays the world grid
 
->>> gol_server:tick().
+gol_server:tick().
+
     ...executes a single global clock increment and displays refreshed world grid
 
->>> gol_server:run( N ).
+gol_server:run( N ).
+
     ...where N sets the finite number of ticks to execute, at 2 second intervals
 
 ===
-Example seed states of interest (lifted from wikipedia examples):
-These require a world grid of 12 by 12 size for best viewing.
+
+Example seed states of interest (lifted from wikipedia examples) - these require a world grid of 12 by 12 size for best viewing.
  
 Still Lifes:
+
       Block: 
       ['2:2', '2:3', '3:2', '3:3']
       Beehive: 
@@ -44,6 +51,7 @@ Still Lifes:
       ['2:2', '2:3', '3:2', '3:4', '4:3']
 
 Oscillators:
+
       Blinker (period 2):
       ['3:2', '3:3', '3:4']
       Toad (period 2):
