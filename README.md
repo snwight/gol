@@ -3,6 +3,7 @@ gol
 Conway's Game of Life as an OTP compliant application 
 
 Comprised of four erlang modules and corresponding application config:
+
      gol_app.erl
      gol_supervisor.erl
      gol_server.erl
