@@ -2,31 +2,36 @@ gol
 ===
 Conway's Game of Life as an OTP compliant application 
 
-Comprised of four erlang modules:
+Comprised of four erlang modules and corresponding application config:
      gol_app.erl
      gol_supervisor.erl
      gol_server.erl
      gol_cell.erl
+     gol.app.src
 
-Run in erlang shell:
+Default world grid is 20 by 20 cells, set in erlang environment KV variable:
+{dimensions, [rows, cols]}}. To change that use application:set_env() or set
+dimensions env in shell invocation as:
+	   erl -pa ./ebin -gol dimensions [<<rows>>, <<cols>>]
 
->>> gol_app:start(normal, [{ RowCount, ColumnCount }]).
-    ...where RowCount is width of the 'world grid', ColumnCount is the height
+From elrang shell:
 
->>> gol_server:seed([ CellKey1, CellKey2, CellKey3, ...CellKeyN ]).
+application:start(gol).
+
+gol_server:seed([ CellKey1, CellKey2, CellKey3, ...CellKeyN ]).
     ...where CellKey is an atom in the following pattern:  'Row:Col' 
     ...see example seed sets below
 
->>> gol_server:display().
+gol_server:display().
     ...prints current state of the world grid
 
->>> gol_server:clear().
+gol_server:clear().
     ...empties and displays the world grid
 
->>> gol_server:tick().
+gol_server:tick().
     ...executes a single global clock increment and displays refreshed world grid
 
->>> gol_server:run( N ).
+gol_server:run( N ).
     ...where N sets the finite number of ticks to execute, at 2 second intervals
 
 ===
