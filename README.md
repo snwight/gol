@@ -44,7 +44,7 @@ From erlang shell:
 
 ===
 
-Example seed states of interest (lifted from wikipedia examples) - these require a world grid of 12 by 12 size for best viewing.
+Example seed states of interest (lifted from wikipedia examples) - these require a minimum world grid of 12 by 12 size for best viewing.
  
 Still Lifes:
 
