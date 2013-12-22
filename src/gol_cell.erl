@@ -6,7 +6,7 @@
 %%     Responsible for:
 %%     - Update and maintenance of attributes of one cell process:
 %%       status:: atom representing state of this cell
-%%           'live' or 'dead'
+%%           'alive' or 'dead'
 %%       cell:: tuple of integers representing location in world
 %%           {Row, Col}
 %%       nbrs:: list of 8 closest neighbor cells as 'row:col' keys
