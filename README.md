@@ -41,13 +41,6 @@ From erlang shell:
 
 ...where N sets a finite number of ticks to execute, at 1 second intervals
 
-	gol_server:clear().
-
-...empties and displays the world grid
-
-	gol_server:tick().
-
-...executes a single global clock increment and displays refreshed world grid
 
 ===
 
