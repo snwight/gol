@@ -1,12 +1,9 @@
 {application, gol,
  [
   {description, "OTP compliant Game of Life"},
-  {vsn, "1"},
+  {vsn, "1.1"},
   {registered, [gol_app, gol_sup, gol_server, gol_cell]},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
+  {applications, [kernel, stdlib]},
   {mod, {gol_app, []}},
-  {env, [{dimensions, [20, 20]}]}
+  {env, [{dimensions, [60, 60]}, {rules, {[3], [2, 3]}}]}
  ]}.

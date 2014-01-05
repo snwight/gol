@@ -27,7 +27,7 @@
 -export([status/1]).
 
 % utility
--export([key/1]).
+-import(gol_server, [key/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -35,9 +35,10 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, { 
+-record(state, {
 	  status = dead :: 'alive' | 'dead',
 	  pending = dead :: 'alive' | 'dead',
+	  predictor :: fun(),
 	  cell = {} :: tuple( integer(), integer() ), 
 	  nbrs = {} :: tuple( atom(), atom(), atom(), atom(),
 			     atom(), atom(), atom(), atom() )
@@ -71,30 +72,25 @@ start_link(Cell) ->
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
-init(Cell) -> {ok, #state{cell=Cell}}.
+init(Cell) -> 
+    {ok, Rules} = application:get_env(gol, rules),
+    {ok, #state{predictor=rule_func(Rules), cell=Cell}}.
 
 handle_call(find_neighbors, _From, State) ->
-    {Row, Col} = State#state.cell,
-    N = key({Row - 1, Col}),
-    NE = key({Row - 1 , Col + 1}),
-    E = key({Row, Col + 1}),
-    SE = key({Row + 1, Col + 1}),
-    S = key({Row + 1, Col}),
-    SW = key({Row + 1, Col - 1}),
-    W = key({Row, Col - 1}),
-    NW = key({Row - 1, Col - 1}),
-    Nbrs = 
+    NbrCells = neighbors(State#state.cell),
+    NbrPids = 
 	lists:map(
 	  fun(C) -> 
 		  case whereis(C) of
 		      undefined -> undefined;
 		      _ -> C
 		  end
-	  end, [N, NE, E, SE, S, SW, W, NW]),
-    {reply, ok, State#state{nbrs=Nbrs}};
+	  end, NbrCells),
+    {reply, ok, State#state{nbrs=NbrPids}};
 handle_call(predict, _From, State) ->
     NbrSum = poll_neighbors(State#state.nbrs),
-    NewStatus = dead_or_alive(State#state.status, NbrSum),
+    Predictor = State#state.predictor,
+    NewStatus = Predictor(State#state.status, NbrSum),
     {reply, ok, State#state{pending=NewStatus}};
 handle_call(tick, _From, State) ->
     {reply, State#state.pending, State#state{status=State#state.pending}};
@@ -111,8 +107,39 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
--spec key(tuple()) -> atom().
-key({Row, Col}) -> list_to_atom(lists:concat([Row, ":", Col])).
+-spec neighbors(tuple()) -> list().
+neighbors({Row, Col}) ->
+    %% 2-D world, 8 neighbors
+    Hood = [{Row - 1, Col},
+	    {Row - 1 , Col + 1},
+	    {Row, Col + 1},
+	    {Row + 1, Col + 1},
+	    {Row + 1, Col},
+	    {Row + 1, Col - 1},
+	    {Row, Col - 1},
+	    {Row - 1, Col - 1}],
+    lists:map(fun(E) -> key(E) end, Hood);
+neighbors(Root={Row, Col, Layer}) ->
+    %% 3-D world, 26 neighbors
+    Hood = [Root,
+	    {Row - 1, Col, Layer},
+	    {Row - 1 , Col + 1, Layer},
+	    {Row, Col + 1, Layer},
+	    {Row + 1, Col + 1, Layer},
+	    {Row + 1, Col, Layer},
+	    {Row + 1, Col - 1, Layer},
+	    {Row, Col - 1, Layer},
+	    {Row - 1, Col - 1, Layer}],
+    LayerHood = 
+	lists:map(
+	  fun({R, C, L}) -> 
+		  lists:map(
+		    fun(Z) ->
+			    key({R, C, L + Z})
+		    end, [-1, 1])
+	  end, Hood),
+    [_|H] = Hood,
+    lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, H)]).
 
 -spec poll_neighbors(record()) -> integer().
 poll_neighbors(Nbrs) ->
@@ -127,7 +154,21 @@ poll_neighbors(Nbrs) ->
 	  end, Nbrs),
     lists:foldl(fun(S, Sum) -> S + Sum end, 0, NbrState).
 
--spec dead_or_alive(integer(), integer()) -> 'dead' | 'alive'.
-dead_or_alive(alive, Sum) when Sum < 2 orelse Sum > 3 -> dead;
-dead_or_alive(_Status, 3) -> alive;
-dead_or_alive(Status, _Sum) -> Status.
+%% A higher-order approach for rule designation:
+%% e.g. for B3/S23 rules, initialize as:
+%%     NewStateFunc = rule_func([3], [2, 3]).
+%% and utilize as:
+%%     NewState = NewStateFun(Status, Sum).
+-spec rule_func(tuple()) -> 'dead' | 'alive'.
+rule_func({Born, Survive}) ->
+    fun (dead, Sum) -> 
+	    case lists:member(Sum, Born) of
+		true -> alive;
+		false -> dead
+	    end;
+	(alive, Sum) ->
+	    case lists:member(Sum, Survive) of
+		true -> alive;
+		false -> dead
+	    end
+    end.
