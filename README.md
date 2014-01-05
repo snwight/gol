@@ -13,7 +13,7 @@ world creations - ie. the cells are not dynamically alterable once they're runni
 Internally the server is almost ready to handle a three dimensional world, that 
 will be the next significant change outside of some minor bug fixes that need attention.
 
-Use application:set_env() in erlang shell or set env in shell invocation as:
+Use application:set_env() in erlang shell or set env in shell invocation as, e.g.:
 
 	erl -pa ./ebin -gol dimensions "[Rows, Cols]" rules "{[Born], [Survive]}"
 
@@ -27,35 +27,35 @@ Seed the world either with a custom-defined list of cells to activate:
 
 where CellKey is an atom in the following pattern:  'Row:Col'
 
-or using the example seed sets described below, which are available using keywords:
+...or use the example seed sets described below, which are available using keywords:
 
 	gol_server:seed(fumarole).
 
-accepted keys are lowercase versions of the named seed patterns below
+Accepted keys are lowercase versions of the named seed patterns below
 
-placement of the seed pattern defaults to center of the world but that's roughly 
+Placement of the seed pattern defaults to center of the world but that's roughly 
 adjustable using an additional parameter to the seed function:
 
 	gol_server:seed(left, fumarole).
 
-accepted locations are [top, bottom, left, right, ctr] 
+Accepted locations are [top, bottom, left, right, ctr] 
 
 	gol_server:display().
 
-prints current state of the world grid
+Prints current state of the world grid
 
 	gol_server:clear().
 
-empties and displays the world grid
+Empties and displays the world grid
 
 	gol_server:tick().
 
-executes a single global clock increment and displays refreshed world grid
+Executes a single global clock increment and displays refreshed world grid
 
 	gol_server:run(<<N>>).
 
-where N sets a finite number of ticks to execute, defaulting to 1000 ms intervals - 
-tune this delay using erlang environment variable tempo, e.g.:
+...Where N sets a finite number of ticks to execute, defaulting to 1000 ms intervals - 
+tune this delay using erlang environment variable tempo, e.g. to drop that to 50 ms:
 {tempo, 50} 
 
 
