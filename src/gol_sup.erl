@@ -25,6 +25,8 @@
 %%      sometimes called a tick (in other words, each generation is a pure 
 %%      function of the preceding one). The rules continue to be applied 
 %%      repeatedly to create further generations.
+%%
+%%  ...that said, this implementation actually allows any BX/SX ruleset
 %%% @end
 %%%-------------------------------------------------------------------
 -module(gol_sup).
@@ -41,15 +43,15 @@
 %%% API functions
 %%%===================================================================
 -spec start_link(list()) -> {ok, pid()}.
-start_link(GridDimensions) ->
-    supervisor:start_link({local, gol_sup}, ?MODULE, GridDimensions).
+start_link(WorldDimensions) ->
+    supervisor:start_link({local, gol_sup}, ?MODULE, WorldDimensions).
 
 %%%===================================================================
 %%% Supervisor callbacks
 %%%===================================================================
 -spec init(list()) -> {ok, {tuple(), [tuple()]}}.
-init(GridDimensions) ->
+init(WorldDimensions) ->
     {ok, {{one_for_one, 1000, 3600},
 	  [{gol_server,
-	    {gol_server, start_link, [GridDimensions]}, 
+	    {gol_server, start_link, [WorldDimensions]}, 
 	    permanent, brutal_kill, worker, [gol_server]}]}}.

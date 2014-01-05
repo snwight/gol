@@ -133,10 +133,7 @@ neighbors(Root={Row, Col, Layer}) ->
     LayerHood = 
 	lists:map(
 	  fun({R, C, L}) -> 
-		  lists:map(
-		    fun(Z) ->
-			    key({R, C, L + Z})
-		    end, [-1, 1])
+		  lists:map(fun(Z) -> key({R, C, L + Z}) end, [-1, 1]) 
 	  end, Hood),
     [_|H] = Hood,
     lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, H)]).

@@ -44,24 +44,24 @@
 seed(Spec) -> 
     seed(ctr, Spec).
 
-seed(Pos, block) -> 
-    seed(Pos, ?BLOCK);
-seed(Pos, beehive) -> 
-    seed(Pos, ?BEEHIVE);
-seed(Pos, loaf) -> 
-    seed(Pos, ?LOAF);
-seed(Pos, boat) -> 
-    seed(Pos, ?BOAT);
-seed(Pos, blinker) -> 
-    seed(Pos, ?BLINKER);
-seed(Pos, toad) -> 
-    seed(Pos, ?TOAD);
-seed(Pos, beacon) -> 
-    seed(Pos, ?BEACON);
-seed(Pos, fumarole) -> 
-    seed(Pos, ?FUMAROLE);
-seed(Pos, pulsar) -> 
-    seed(Pos, ?PULSAR);
+seed(Pos, block)                   -> seed(Pos, ?BLOCK);
+seed(Pos, beehive)                 -> seed(Pos, ?BEEHIVE);
+seed(Pos, loaf)                    -> seed(Pos, ?LOAF);
+seed(Pos, boat)                    -> seed(Pos, ?BOAT);
+seed(Pos, blinker)                 -> seed(Pos, ?BLINKER);
+seed(Pos, toad)                    -> seed(Pos, ?TOAD);
+seed(Pos, beacon)                  -> seed(Pos, ?BEACON);
+seed(Pos, fumarole)                -> seed(Pos, ?FUMAROLE);
+seed(Pos, pulsar)                  -> seed(Pos, ?PULSAR);
+seed(Pos, glider)                  -> seed(Pos, ?GLIDER);
+seed(Pos, lwss)                    -> seed(Pos, ?LWSS);
+seed(Pos, gosper)                  -> seed(Pos, ?GOSPER);
+seed(Pos, pentomino)               -> seed(Pos, ?PENTOMINO);
+seed(Pos, diehard)                 -> seed(Pos, ?DIEHARD);
+seed(Pos, acorn)                   -> seed(Pos, ?ACORN);
+seed(Pos, blsse1)                  -> seed(Pos, ?BLSSE1);
+seed(Pos, blsse2)                  -> seed(Pos, ?BLSSE2);
+seed(Pos, linear1)                 -> seed(Pos, ?LINEAR1);
 seed(Pos, Spec) when is_list(Spec) -> 
     gen_server:call(gol_server, {seed, {Pos, Spec}}).
 
@@ -77,8 +77,9 @@ clear() -> gen_server:cast(gol_server, clear).
 -spec run(integer()) -> ok.
 run(0) -> ok;
 run(NumCycles) when NumCycles > 0 -> 
+    {ok, Tempo} = application:get_env(gol, tempo),
     tick(),
-    timer:sleep(1000),
+    timer:sleep(Tempo),
     run(NumCycles - 1).
 
 start_link(WorldDimensions) ->
@@ -159,10 +160,14 @@ key({Row, Col, Layer}) ->
 
 -spec unpack_key(atom()) -> tuple().
 unpack_key(Key) ->
-    list_to_tuple(
-      lists:map(
-	fun(W) -> string:to_integer(W) end, 
-	string:tokens(atom_to_list(Key), ":"))).
+    Res = list_to_tuple(
+	    lists:map(
+	      fun(W) -> 
+		      {V, _} = string:to_integer(W), 
+		      V
+	      end, 
+	      string:tokens(atom_to_list(Key), ":"))),
+    Res.
 
 %%
 %% utilities for auto-positioning seed patterns
@@ -187,11 +192,7 @@ seed_pos_offset(Rows, Cols, {ctr, Spec}) ->
 find_seed_bounds(Spec) ->
     bounds(Spec, undefined, undefined, undefined, undefined).
 
-bounds([], MinR, MaxR, MinC, MaxC) ->
-    io:format("~p - ~p, ~p - ~p~n", [MaxR, MinR, MaxC, MinC]),
-    Width = MaxC - MinC,
-    Height = MaxR - MinR,
-    {Width, Height};
+bounds([], MinR, MaxR, MinC, MaxC) -> {MaxC - MinC,  MaxR - MinR};
 bounds([H |T], undefined, undefined, undefined, undefined) ->
     {R, C} = unpack_key(H),
     bounds(T, R, R, C, C);

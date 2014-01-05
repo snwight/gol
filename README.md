@@ -54,7 +54,9 @@ executes a single global clock increment and displays refreshed world grid
 
 	gol_server:run(<<N>>).
 
-where N sets a finite number of ticks to execute, at 1 second intervals
+where N sets a finite number of ticks to execute, defaulting to 1000 ms intervals - 
+tune this delay using erlang environment variable tempo, e.g.:
+{tempo, 50} 
 
 
 ===
