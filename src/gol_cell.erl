@@ -39,7 +39,7 @@
 	  status = dead :: 'alive' | 'dead',
 	  pending = dead :: 'alive' | 'dead',
 	  predictor :: fun(),
-	  cell = {} :: tuple( integer(), integer() ), 
+	  cell = {} :: tuple( integer(), integer(), tuple() ), 
 	  nbrs = {} :: tuple( atom(), atom(), atom(), atom(),
 			     atom(), atom(), atom(), atom() )
 	}).
@@ -95,7 +95,7 @@ handle_call(predict, _From, State) ->
 handle_call(tick, _From, State) ->
     {reply, State#state.pending, State#state{status=State#state.pending}};
 handle_call(live, _From, State)     -> {reply, ok, State#state{status=alive}};
-handle_call(die, _From, State)      -> {reply, ok, State#state{status=dead}};
+handle_call(die, _From, State)      -> {reply, dead, State#state{status=dead}};
 handle_call(status, _From, State)   -> {reply, State#state.status, State};
 handle_call(_Request, _From, State) -> {reply, ok, State}.
 
@@ -133,7 +133,10 @@ neighbors(Root={Row, Col, Layer}) ->
     LayerHood = 
 	lists:map(
 	  fun({R, C, L}) -> 
-		  lists:map(fun(Z) -> key({R, C, L + Z}) end, [-1, 1]) 
+		  lists:map(fun(Z) ->
+				    K = key({R, C, L + Z}) ,
+				    K
+			    end, [-1, 1]) 
 	  end, Hood),
     [_|H] = Hood,
     lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, H)]).
