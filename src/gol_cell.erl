@@ -8,9 +8,10 @@
 %%       status:: atom representing state of this cell
 %%           'alive' or 'dead'
 %%       cell:: tuple of integers representing location in world
-%%           {Row, Col}
+%%           {Row, Col, Layer}
 %%       nbrs:: list of 8 closest neighbor cells as 'row:col' keys
 %%           [N, NE, E, SE, S, SW, W, NW]
+%%              or list of 26 closest neighbors in a 3-D world
 %%% @end
 %%%-------------------------------------------------------------------
 -module(gol_cell).
