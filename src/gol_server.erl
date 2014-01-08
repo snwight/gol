@@ -96,7 +96,6 @@ init([Rows, Cols]) ->
     init([Rows, Cols, 1]);
 init([Rows, Cols, Layers]) ->
     World = add_layers(Rows, Cols, Layers, []),
-    %%    io:format("World: ~p~n", [World]),
     lists:foreach(
       fun(LD) ->
 	      lists:foreach(fun(C) -> gol_cell:find_neighbors(C) end, LD)
@@ -151,13 +150,9 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%% Internal functions
 %%%===================================================================
 -spec add_layers(integer(), integer(), integer(), list()) -> list().
-add_layers(_Row, _Col, 0, World) -> 
-    io:format("world pre reverse ~p~n", [World]),
-    R = lists:reverse(World),
-    io:format("post reverse ~p~n", [R]),
-    R;
+add_layers(_Row, _Col, 0, World) -> World;
 add_layers(Row, Col, Layer, World) ->
-    [add_cells(Row, Col, Layer, World) | add_layers(Row, Col, Layer - 1, World)].
+    add_layers(Row, Col, Layer - 1, [add_cells(Row, Col, Layer, []) | World]).
 
 -spec add_cells(integer(), integer(), integer(), list()) -> list().
 add_cells(0, _Col, _Layer, World) -> World;

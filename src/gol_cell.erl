@@ -119,27 +119,28 @@ neighbors({Row, Col}) ->
 	    {Row, Col - 1},
 	    {Row - 1, Col - 1}],
     lists:map(fun(E) -> key(E) end, Hood);
-neighbors(Root={Row, Col, Layer}) ->
-    %% 3-D world, 26 neighbors
-    Hood = [Root,
-	    {Row - 1, Col, Layer},
-	    {Row - 1 , Col + 1, Layer},
-	    {Row, Col + 1, Layer},
-	    {Row + 1, Col + 1, Layer},
-	    {Row + 1, Col, Layer},
-	    {Row + 1, Col - 1, Layer},
-	    {Row, Col - 1, Layer},
-	    {Row - 1, Col - 1, Layer}],
-    LayerHood = 
-	lists:map(
-	  fun({R, C, L}) -> 
-		  lists:map(fun(Z) ->
-				    K = key({R, C, L + Z}) ,
-				    K
-			    end, [-1, 1]) 
-	  end, Hood),
-    [_|H] = Hood,
-    lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, H)]).
+neighbors(_Root={Row, Col, _Layer}) ->
+    neighbors({Row, Col}).
+    %% %% 3-D world, 26 neighbors
+    %% Hood = [Root,
+    %% 	    {Row - 1, Col, Layer},
+    %% 	    {Row - 1 , Col + 1, Layer},
+    %% 	    {Row, Col + 1, Layer},
+    %% 	    {Row + 1, Col + 1, Layer},
+    %% 	    {Row + 1, Col, Layer},
+    %% 	    {Row + 1, Col - 1, Layer},
+    %% 	    {Row, Col - 1, Layer},
+    %% 	    {Row - 1, Col - 1, Layer}],
+    %% LayerHood = 
+    %% 	lists:map(
+    %% 	  fun({R, C, L}) -> 
+    %% 		  lists:map(fun(Z) ->
+    %% 				    K = key({R, C, L + Z}) ,
+    %% 				    K
+    %% 			    end, [-1, 1]) 
+    %% 	  end, Hood),
+    %% [_|H] = Hood,
+    %% lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, H)]).
 
 -spec poll_neighbors(record()) -> integer().
 poll_neighbors(Nbrs) ->
