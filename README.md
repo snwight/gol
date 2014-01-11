@@ -15,7 +15,7 @@ will be the next significant change outside of some minor bug fixes that need at
 
 Use application:set_env() in erlang shell or set env in shell invocation as, e.g.:
 
-	erl -pa ./ebin -gol dimensions "[Rows, Cols]" rules "{[Born], [Survive]}"
+	erl -pa ./ebin -gol dimensions "[Rows, Cols, Layers]" rules "{[Born], [Survive]}"
 
 From erlang shell, start the application:
 
