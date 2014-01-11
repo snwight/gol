@@ -2,10 +2,10 @@ gol
 ===
 Conway's Game of Life as an OTP-compliant application 
 
-Default world grid is 60 by 60 cells, set in erlang environment variable:
-{dimensions, [60, 60]}}. 
+Default world grid is 60 by 80 by 1 cells (i.e. a planar world), set in erlang environment variable:
+{dimensions, [60, 80, 1]}}. 
 
-Default rule set is Conway's 'B2/S23', set in erlang environment variable:
+Default rule set is Conway's 'B3/S23', set in erlang environment variable:
 {rules, {[3], [2, 3]}}. Much fun can be had changing those parameters to 
 make more hostile or more fecund environments. Rule changes take place between
 world creations - ie. the cells are not dynamically alterable once they're running.
