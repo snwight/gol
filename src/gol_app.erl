@@ -10,13 +10,16 @@
 %% Application callbacks
 -export([start/2, stop/1]).
 
+-include("gol.hrl").
+
 %%%===================================================================
 %%% Application callbacks
 %%%===================================================================
 -spec start(term(), term()) -> {ok, pid()}.
 start(_StartType, _StartArgs) ->
-    {ok, GridDimensions} = application:get_env(gol, dimensions),
-    case gol_sup:start_link(GridDimensions) of
+    {ok, [Rows, Cols, Layers]} = application:get_env(gol, dimensions),
+    
+    case gol_sup:start_link(#dims{rows=Rows, cols=Cols, layers=Layers}) of
 	{ok, Pid} ->
 	    {ok, Pid};
 	Error ->

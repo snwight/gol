@@ -1,3 +1,19 @@
+%%% @author Steve Wight <northwight@gmail.com>
+%%% @doc
+%%%     Some data types and some example seed patterns naively implemented
+%%% @end
+%%% Created : 11 Jan 2014 by Steve Wight
+
+%% this holds the width, height, depth of the world
+-record(dims, {rows = 0 :: non_neg_integer(), 
+	       cols = 0 :: non_neg_integer(), 
+	       layers = 0 :: non_neg_integer()}).
+
+%% this holds a single cell's location in world matrix
+-record(cell, {row = 0 :: non_neg_integer(), 
+	       col = 0 :: non_neg_integer(), 
+	       layer = 0 :: non_neg_integer()}).
+
 %%
 %% "still lifes"
 %%

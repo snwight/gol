@@ -30,12 +30,9 @@
 -include("gol.hrl").
 
 -define(SERVER, ?MODULE). 
+-define(SAFE_BORDER, 5).
 
--record(state, 
-	{rows = 0 :: integer(), 
-	 cols = 0 :: integer(), 
-	 layers = 0 :: integer(), 
-	 world = [] :: list()}).
+-record(state, {dims = #dims{} :: record(), world = [] :: list()}).
 
 %%%===================================================================
 %%% API
@@ -55,6 +52,7 @@ seed(Pos, beacon)                  -> seed(Pos, ?BEACON);
 seed(Pos, fumarole)                -> seed(Pos, ?FUMAROLE);
 seed(Pos, pulsar)                  -> seed(Pos, ?PULSAR);
 seed(Pos, glider)                  -> seed(Pos, ?GLIDER);
+seed(Pos, lwss)                    -> seed(Pos, ?LWSS);
 seed(Pos, gosper)                  -> seed(Pos, ?GOSPER);
 seed(Pos, pentomino)               -> seed(Pos, ?PENTOMINO);
 seed(Pos, diehard)                 -> seed(Pos, ?DIEHARD);
@@ -69,7 +67,7 @@ seed(Pos, Spec) when is_list(Spec) ->
 tick() -> gen_server:cast(gol_server, tick).
 
 -spec display() -> ok.
-display() -> gen_server:cast(gol_server, {display, 1}).
+display() -> gen_server:cast(gol_server, {display, 0}).
 
 -spec display(integer()) -> ok.
 display(Layer) -> gen_server:cast(gol_server, {display, Layer}).
@@ -86,34 +84,29 @@ run(NumCycles) when NumCycles > 0 ->
     timer:sleep(Tempo),
     run(NumCycles - 1).
 
-start_link(WorldDimensions) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, WorldDimensions, []).
+start_link(Dims) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, Dims, []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
-init([Rows, Cols]) ->
-    init([Rows, Cols, 1]);
-init([Rows, Cols, Layers]) ->
-    World = add_layers(Rows, Cols, Layers, []),
+init(Dims) ->
+    World = add_layers(Dims),
     lists:foreach(
       fun(LD) ->
 	      lists:foreach(fun(C) -> gol_cell:find_neighbors(C) end, LD)
       end, World),
-    {ok, #state{rows=Rows, cols=Cols, layers=Layers, world=World}}.
+    {ok, #state{dims=Dims, world=World}}.
 
 handle_call({seed, SeedSpec={_Pos, Spec}}, _From, State) -> 
     io:format("gol_server:handle_call seed ~p~n", [SeedSpec]),
-    %% XXX snwight
-    %% neuter all Z axis pos & offsets temporarily
-    {Rd, Cd, _Ld} = seed_pos_offset(State#state.rows, 
-				   State#state.cols, 
-				   State#state.layers, 
-				   SeedSpec),
+    %% derive footprint of seed pattern and center point as deltas  
+    {Rd, Cd, _Ld} = seed_pos_offset(State#state.dims, SeedSpec),
     lists:foreach(
-      fun(CellKey) -> 
-	      {R, C, _L} = unpack_key(CellKey),
-	      gol_cell:live(key({R + Rd, C + Cd, 1})) 
+      fun(CellKey) ->
+              {R, C, L} = unpack_key(CellKey),
+	      %% neutering layer offsets for now
+              gol_cell:live(key({R + Rd, C + Cd, L})) 
       end, Spec),
     {reply, ok, State};
 handle_call(_Request, _From, State) -> {reply, ok, State}.
@@ -130,14 +123,15 @@ handle_cast(tick, State) ->
       end, State#state.world),
     {noreply, State};
 handle_cast({display, Layer}, State) ->
-    display_layer(State#state.world, State#state.cols, Layer),
+    display_layer(State#state.world, (State#state.dims)#dims.cols, Layer),
     {noreply, State};
 handle_cast(clear, State) ->
     lists:foreach(
       fun(LD) -> 
     	      lists:foreach(fun(C) -> gol_cell:die(C) end, LD)
       end, State#state.world),
-    display_layer(State#state.world, State#state.cols, 1),  %% default layer 1
+    %% for now we default is to only display layer 1
+    display_layer(State#state.world, (State#state.dims)#dims.cols, 0),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -149,21 +143,30 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
--spec add_layers(integer(), integer(), integer(), list()) -> list().
-add_layers(_Row, _Col, 0, World) -> World;
-add_layers(Row, Col, Layer, World) ->
-    add_layers(Row, Col, Layer - 1, [add_cells(Row, Col, Layer, []) | World]).
+-spec add_layers(record()) -> list().
+add_layers(Dims) -> 
+    %% fugly -1 is because I want zero-origin planes
+    add_layers(Dims#dims.rows - 1, 
+	       Dims#dims.cols - 1, 
+	       Dims#dims.layers - 1, Dims, []).
 
--spec add_cells(integer(), integer(), integer(), list()) -> list().
-add_cells(0, _Col, _Layer, World) -> World;
-add_cells(Row, Col, Layer, World) -> 
-    add_cells(Row - 1, Col, Layer, add_row(Row, Col, Layer, World)).
+-spec add_layers(integer(), integer(), integer(), record(), list()) -> list().
+add_layers(_Row, _Col, -1, _Dims, World) -> World;
+add_layers(Row, Col, Layer, Dims, World) ->
+    add_layers(Row, Col, Layer - 1, Dims, 
+	       [add_cells(Row, Col, Layer, Dims, []) | World]).
 
--spec add_row(integer(), integer(), integer(), list()) -> list().
-add_row(_Row, 0, _Layer, World) -> World;
-add_row(Row, Col, Layer, World) ->
-    gol_cell:start_link({Row, Col, Layer}),
-    add_row(Row, Col - 1, Layer, [key({Row, Col, Layer}) | World]).
+-spec add_cells(integer(), integer(), integer(), record(), list()) -> list().
+add_cells(-1, _Col, _Layer, _Dims, World) -> World;
+add_cells(Row, Col, Layer, Dims, World) -> 
+    add_cells(Row - 1, Col, Layer, Dims, add_row(Row, Col, Layer, Dims, World)).
+
+-spec add_row(integer(), integer(), integer(), record(), list()) -> list().
+add_row(_Row, -1, _Layer, _Dims, World) -> World;
+add_row(Row, Col, Layer, Dims, World) ->
+    %% create a new cell
+    gol_cell:start_link([#cell{row=Row, col=Col, layer=Layer}, Dims]),
+    add_row(Row, Col - 1, Layer, Dims, [key({Row, Col, Layer}) | World]).
 
 -spec display_layer(list(), integer(), integer()) -> ok.
 display_layer(World, NumCols, Layer) ->
@@ -173,7 +176,7 @@ display_layer(World, NumCols, Layer) ->
 		       dead -> " ";
 		       alive -> "@"
 		   end
-	   end, lists:nth(Layer, World)),
+	   end, lists:nth(Layer + 1, World)),
     display_layer(DL, NumCols).
 
 display_layer([], _NumCols) -> ok;
@@ -182,8 +185,6 @@ display_layer(DL, NumCols) ->
     display_layer(lists:nthtail(NumCols, DL), NumCols).
 
 -spec key(tuple()) -> atom().
-key({Row, Col}) -> 
-    key({Row, Col, 1});
 key({Row, Col, Layer}) -> 
     list_to_atom(lists:concat([Row, ":", Col, ":", Layer])).
 
@@ -194,31 +195,31 @@ unpack_key(Key) ->
     list_to_tuple(
       case length(L) of
 	  3 -> L;
-	  2 -> lists:append(L, [1])  %% force 2-D key to 3-D
+	  2 -> lists:append(L, [0])  %% force 2-D key to 3-D
       end).
 
 %%
 %% utilities for auto-positioning seed patterns
 %%
-seed_pos_offset(_Rows, Cols, Layers, {top, Spec}) ->
-    {Width, _Height, Depth} = find_seed_bounds(Spec),
-    {4, Cols div 2 - Width div 2,
-     Layers div 2 - Depth div 2};
-seed_pos_offset(Rows, Cols, Layers, {bottom, Spec}) ->
-    {Width, Height, Depth} = find_seed_bounds(Spec),
-    {Rows - Height - 2, Cols div 2 - Width div 2, 
-     Layers div 2 - Depth div 2};
-seed_pos_offset(Rows, Cols, Layers, {right, Spec}) ->
-    {Width, Height, Depth} = find_seed_bounds(Spec),
-    {Rows div 2 - Height div 2, Cols - Width - 4,
-     Layers div 2 - Depth div 2};
-seed_pos_offset(Rows, _Cols, Layers, {left, Spec}) ->
-    {_Width, Height, Depth} = find_seed_bounds(Spec),
-    {Rows div 2 - Height div 2, 4, 
-     Layers div 2 - Depth div 2};
-seed_pos_offset(Rows, Cols, Layers, {ctr, Spec}) ->
+seed_pos_offset(#dims{rows=Rows, cols=Cols, layers=Layers}, {ctr, Spec}) ->
     {Width, Height, Depth} = find_seed_bounds(Spec),
     {Rows div 2 - Height div 2, Cols div 2 - Width div 2, 
+     Layers div 2 - Depth div 2};
+seed_pos_offset(#dims{cols=Cols, layers=Layers}, {top, Spec}) ->
+    {Width, _Height, Depth} = find_seed_bounds(Spec),
+    {?SAFE_BORDER, Cols div 2 - Width div 2, 
+     Layers div 2 - Depth div 2};
+seed_pos_offset(#dims{rows=Rows, cols=Cols, layers=Layers}, {bottom, Spec}) ->
+    {Width, Height, Depth} = find_seed_bounds(Spec),
+    {Rows - Height - ?SAFE_BORDER, Cols div 2 - Width div 2, 
+     Layers div 2 - Depth div 2};
+seed_pos_offset(#dims{rows=Rows, cols=Cols, layers=Layers}, {right, Spec}) ->
+    {Width, Height, Depth} = find_seed_bounds(Spec),
+    {Rows div 2 - Height div 2, Cols - Width - ?SAFE_BORDER, 
+     Layers div 2 - Depth div 2};
+seed_pos_offset(#dims{rows=Rows, cols=_Cols, layers=Layers}, {left, Spec}) ->
+    {_Width, Height, Depth} = find_seed_bounds(Spec),
+    {Rows div 2 - Height div 2, ?SAFE_BORDER, 
      Layers div 2 - Depth div 2}.
 
 find_seed_bounds([H|T]) -> 
@@ -229,10 +230,10 @@ bounds([], MinR, MaxR, MinC, MaxC, MinL, MaxL) ->
     {MaxC - MinC,  MaxR - MinR, MinL - MaxL};
 bounds([H |T], MinR, MaxR, MinC, MaxC, MinL, MaxL) ->
     {R, C, L} = unpack_key(H),
-    NewMinR = if R < MinR -> R; true -> MinR end,
-    NewMaxR = if R > MaxR -> R; true -> MaxR end,
-    NewMinC = if C < MinC -> C; true -> MinC end,
-    NewMaxC = if C > MaxC -> C; true -> MaxC end,
-    NewMinL = if L < MinL -> C; true -> MinL end,
-    NewMaxL = if L > MaxL -> C; true -> MaxL end,
+    NewMinR = if R < MinR -> R; R >= MinR -> MinR end,
+    NewMaxR = if R > MaxR -> R; R =< MaxR -> MaxR end,
+    NewMinC = if C < MinC -> C; C >= MinC -> MinC end,
+    NewMaxC = if C > MaxC -> C; C =< MaxC -> MaxC end,
+    NewMinL = if L < MinL -> C; L >= MinL -> MinL end,
+    NewMaxL = if L > MaxL -> C; L =< MaxL -> MaxL end,
     bounds(T, NewMinR, NewMaxR, NewMinC, NewMaxC, NewMinL, NewMaxL).

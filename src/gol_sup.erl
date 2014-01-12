@@ -43,15 +43,15 @@
 %%% API functions
 %%%===================================================================
 -spec start_link(list()) -> {ok, pid()}.
-start_link(WorldDimensions) ->
-    supervisor:start_link({local, gol_sup}, ?MODULE, WorldDimensions).
+start_link(Dims) ->
+    supervisor:start_link({local, gol_sup}, ?MODULE, Dims).
 
 %%%===================================================================
 %%% Supervisor callbacks
 %%%===================================================================
 -spec init(list()) -> {ok, {tuple(), [tuple()]}}.
-init(WorldDimensions) ->
+init(Dims) ->
     {ok, {{one_for_one, 1000, 3600},
 	  [{gol_server,
-	    {gol_server, start_link, [WorldDimensions]}, 
+	    {gol_server, start_link, [Dims]}, 
 	    permanent, brutal_kill, worker, [gol_server]}]}}.

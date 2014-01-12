@@ -36,14 +36,16 @@
 
 -define(SERVER, ?MODULE). 
 
+-include("gol.hrl").
+
 -record(state, {
-	  status = dead :: 'alive' | 'dead',
-	  pending = dead :: 'alive' | 'dead',
+	  status = 'dead' :: 'alive' | 'dead',
+	  pending = 'dead' :: 'alive' | 'dead',
 	  predictor :: fun(),
-	  cell = {} :: tuple( integer(), integer(), tuple() ), 
-	  nbrs = {} :: tuple( atom(), atom(), atom(), atom(),
-			     atom(), atom(), atom(), atom() )
-	}).
+	  dims = #dims{} :: record(),
+	  cell = #cell{} :: record(),
+	  nbrs = [] :: list()
+	 }).
 
 %%%===================================================================
 %%% API
@@ -67,18 +69,18 @@ predict(CellKey) -> gen_server:call(CellKey, predict).
 tick(CellKey) -> gen_server:call(CellKey, tick).
 
 -spec start_link(tuple()) -> {ok, pid()}.
-start_link(Cell) ->
-    gen_server:start_link({local, key(Cell)}, ?MODULE, Cell, []).
+start_link(Args=[#cell{row=Row, col=Col, layer=Layer}, _Dims]) ->
+    gen_server:start_link({local, key({Row, Col, Layer})}, ?MODULE, Args, []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
-init(Cell) -> 
+init([Cell, Dims]) -> 
     {ok, Rules} = application:get_env(gol, rules),
-    {ok, #state{predictor=rule_func(Rules), cell=Cell}}.
+    {ok, #state{predictor=rule_func(Rules), cell=Cell, dims=Dims}}.
 
 handle_call(find_neighbors, _From, State) ->
-    NbrCells = neighbors(State#state.cell),
+    NbrCells = neighbors(State#state.cell, State#state.dims),
     NbrPids = 
 	lists:map(
 	  fun(C) -> 
@@ -108,42 +110,59 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
--spec neighbors(tuple()) -> list().
-neighbors({Row, Col}) ->
-    %% 2-D world, 8 neighbors
-    Hood = [{Row - 1, Col},
-	    {Row - 1 , Col + 1},
-	    {Row, Col + 1},
-	    {Row + 1, Col + 1},
-	    {Row + 1, Col},
-	    {Row + 1, Col - 1},
-	    {Row, Col - 1},
-	    {Row - 1, Col - 1}],
+-spec neighbors(record(), record()) -> list().
+neighbors(#cell{row=0, col=Col, layer=0}, #dims{cols=Cols, layers=0}) ->
+    %% 1-D (linear) wraparound world, 2 neighbors
+    ColL = if Col == 0 -> Cols; Col > 0 -> Col - 1 end,
+    ColR = if Col == Cols -> 0; Col < Cols -> Col + 1 end,
+    [key({0, ColL, 0}), key({0, ColR, 0})];
+neighbors(#cell{row=Row, col=Col, layer=Layer}, 
+	  #dims{rows=Rows, cols=Cols, layers=1}) ->
+    %% 2-D wraparound world, 8 neighbors
+    RowUp = if Row == 0 -> Rows; Row > 0 -> Row - 1  end,
+    RowDown = if Row == Rows -> 0; Row < Rows -> Row + 1 end,
+    ColL = if Col == 0 -> Cols; Col > 0 -> Col - 1 end,
+    ColR = if Col == Cols -> 0; Col < Cols -> Col + 1 end,
+    Hood = [{RowUp, Col, Layer},
+	    {RowUp , ColR, Layer},
+	    {Row, ColR, Layer},
+	    {RowDown, ColR, Layer},
+	    {RowDown, Col, Layer},
+	    {RowDown, ColL, Layer},
+	    {Row, ColL, Layer},
+	    {RowUp, ColL, Layer}],
     lists:map(fun(E) -> key(E) end, Hood);
-neighbors(_Root={Row, Col, _Layer}) ->
-    neighbors({Row, Col}).
-    %% %% 3-D world, 26 neighbors
-    %% Hood = [Root,
-    %% 	    {Row - 1, Col, Layer},
-    %% 	    {Row - 1 , Col + 1, Layer},
-    %% 	    {Row, Col + 1, Layer},
-    %% 	    {Row + 1, Col + 1, Layer},
-    %% 	    {Row + 1, Col, Layer},
-    %% 	    {Row + 1, Col - 1, Layer},
-    %% 	    {Row, Col - 1, Layer},
-    %% 	    {Row - 1, Col - 1, Layer}],
-    %% LayerHood = 
-    %% 	lists:map(
-    %% 	  fun({R, C, L}) -> 
-    %% 		  lists:map(fun(Z) ->
-    %% 				    K = key({R, C, L + Z}) ,
-    %% 				    K
-    %% 			    end, [-1, 1]) 
-    %% 	  end, Hood),
-    %% [_|H] = Hood,
-    %% lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, H)]).
+neighbors(#cell{row=Row, col=Col, layer=Layer}, 
+	  #dims{rows=Rows, cols=Cols, layers=Layers}) ->
+    %% XXX snwight
+    %% temporarily neutered 3-D world neighbor consultations
+    %% 3-D wraparound world, 26 neighbors
+    RowUp = if Row == 0 -> Rows; true -> Row end,
+    RowDown = if Row == Rows -> 0; true -> Rows end,
+    ColL = if Col == 0 -> Cols; true -> Col end,
+    ColR = if Col == Cols -> 0; true -> Cols end,
+    %% Hood is the 2-D planar 8-member neighborhood around our root cell
+    Hood = [{RowUp, Col, Layer},
+	    {RowUp , ColR, Layer},
+	    {Row, ColR, Layer},
+	    {RowDown, ColR, Layer},
+	    {RowDown, Col, Layer},
+	    {RowDown, ColL, Layer},
+	    {Row, ColL, Layer},
+	    {RowUp, ColL, Layer}],
+    %% RootHood is our 8 2-D neighbors PLUS the cell itself ("root")
+    RootHood = [{Row, Col, Layer}|Hood],
+    %% LayerHood is 2 9-member planes based on RootHood, offset +-1 layer
+    LayerHood = 
+    	lists:map(
+    	  fun({R, C, L}) -> 
+    		  LayerFg = if L == 0 -> Layers; L > 0 -> L - 1 end,
+    		  LayerBg = if L == Layers -> 0; L < Layers -> L + 1 end,
+    		  [{R, C, LayerFg}, {R, C, LayerBg}]
+    	  end, RootHood),
+    lists:flatten([LayerHood, lists:map(fun(E) -> key(E) end, Hood)]).
 
--spec poll_neighbors(record()) -> integer().
+-spec poll_neighbors(list()) -> non_neg_integer().
 poll_neighbors(Nbrs) ->
     NbrState = 
 	lists:map(
