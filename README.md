@@ -11,16 +11,16 @@ From the Erlang shell, start the application:
 
 	application:start(gol).
 	
-The default world grid is 60 by 80 by 1 cells (i.e. a 2-D planar world), set in erlang environment variable:
-{dimensions, [60, 80, 1]}}.  One-dimensional (i.e. linear) worlds are now supported, just set Rows to 1:
-{dimensions, [1, 80, 1]}}. 
+The default world grid is 60 by 80 by 1 cell (a 2-D planar world), set in Erlang environment variable 'dimensions': {dimensions, [60, 80, 1]}, where the three element list represents [row count, column count, depth].
 
-The default rule set is Conway's 'B3/S23', set in erlang environment variable:
+One-dimensional (i.e. linear) worlds are now supported, simply set rows to 1: {dimensions, [1, 80, 1]}. 
+
+The default rule set is Conway's 'B3/S23', set in Erlang environment variable 'rules':
 {rules, {[3], [2, 3]}}. 
 
- A collection of predefined rules (see below) is now available via the new rules() function:
+ A collection of predefined rules (see below) is now available via the new rules() function, e.g.:
 
-	gol_server:rule(<<rule_name>>).
+	gol_server:rule(rule90).
 
 Seed the world either with a custom-defined list of cells to activate:
 
@@ -28,7 +28,7 @@ Seed the world either with a custom-defined list of cells to activate:
 
 where CellKey is an atom in the following pattern:  'Row:Col'
 
-...or use the example seed sets described below, which are available using keywords:
+...or use the example seed sets described below, which are available using keywords, e.g.:
 
 	gol_server:seed(fumarole).
 
