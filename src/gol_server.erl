@@ -18,7 +18,7 @@
 
 %% API
 -export([start_link/1]).
--export([seed/1, seed/2, tick/0, run/1, display/0, display/1, clear/0]).
+-export([seed/1, seed/2, rule/1, tick/0, run/1, display/0, display/1, clear/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -38,10 +38,9 @@
 %%% API
 %%%===================================================================
 -spec seed(list()) -> ok.
+seed(Spec) -> seed(ctr, Spec).
 
-seed(Spec) -> 
-    seed(ctr, Spec).
-
+-spec seed(atom(), atom() | list()) -> ok.
 seed(Pos, block)                   -> seed(Pos, ?BLOCK);
 seed(Pos, beehive)                 -> seed(Pos, ?BEEHIVE);
 seed(Pos, loaf)                    -> seed(Pos, ?LOAF);
@@ -60,8 +59,33 @@ seed(Pos, acorn)                   -> seed(Pos, ?ACORN);
 seed(Pos, blsse1)                  -> seed(Pos, ?BLSSE1);
 seed(Pos, blsse2)                  -> seed(Pos, ?BLSSE2);
 seed(Pos, linear1)                 -> seed(Pos, ?LINEAR1);
-seed(Pos, Spec) when is_list(Spec) -> 
-    gen_server:call(gol_server, {seed, {Pos, Spec}}).
+seed(Pos, Spec) -> gen_server:call(gol_server, {seed, {Pos, Spec}}).
+
+-spec rule(atom() | list()) -> ok.
+rule(conway)                          -> rule(?CONWAY);
+rule(life34)                          -> rule(?LIFE34);
+rule(highlife)                        -> rule(?HIGHLIFE);
+rule(daynight)                        -> rule(?DAYNIGHT);
+rule(coral)                           -> rule(?CORAL);
+rule(coagulations)                    -> rule(?COAGULATIONS);
+rule(assimilation)                    -> rule(?ASSIMILATION);
+rule(amoeba)                          -> rule(?AMOEBA);
+rule(blocks2x2)                       -> rule(?BLOCKS2X2);
+rule(flakes)                          -> rule(?FLAKES);
+rule(gnarl)                           -> rule(?GNARL);
+rule(longlife)                        -> rule(?LONGLIFE);
+rule(maze)                            -> rule(?MAZE);
+rule(mazectric)                       -> rule(?MAZECTRIC);
+rule(move)                            -> rule(?MOVE);
+rule(pseudolife)                      -> rule(?PSEUDOLIFE);
+rule(replicator)                      -> rule(?REPLICATOR);
+rule(stains)                          -> rule(?STAINS);
+rule(walledcities)                    -> rule(?WALLEDCITIES);
+rule(rule30)                          -> rule(?RULE30);
+rule(rule90)                          -> rule(?RULE90);
+rule(rule110)                         -> rule(?RULE110);
+rule(rule184)                         -> rule(?RULE184);
+rule(RuleSpec) -> application:set_env(gol, rules, RuleSpec).
 
 -spec tick() -> ok.
 tick() -> gen_server:cast(gol_server, tick).

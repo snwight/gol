@@ -14,6 +14,70 @@
 	       col = 0 :: non_neg_integer(), 
 	       layer = 0 :: non_neg_integer()}).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% interesting rule sets - rules { [ BirthConditions ], [ SurvivalConditions] }
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% 1-D
+%%
+%% from Mirek: 
+%% One-dimensional totalistic CA notation
+%% The notation of one-dimensional totalistic CA rules has the "R,C,M,S,B" form:
+%%    R - specifies the range (1..10)
+%%    C - specifies the count of states, 0..256. A value smaller than 3 means 
+%%        the history is not active. Values greater than 2 activate the history,
+%%        with the given count of states.
+%%    M - specifies activity of the center (middle) cell. 1 is on, 0 is off.
+%%    S - specifies a single total of neighbors allowing the cell to survive. '
+%%        S' can appear any times in the rule. Example: S2,S3,S8.
+%%    B - specifies a single total of neighbors allowing the cell to be born. 
+%%        'B' can appear any times in the rule. Example: B0,B3,B4,B17
+%%
+%% WOLFRAM - just the survival conditions are used
+%% 111/0 110/1 101/0 100/1 011/1 010/0 001/1 000/0
+%%	   die = [{0,dead,0}, {0,alive,0}, {1,dead,1}]}).
+-define(RULE90,	[{0,dead,1}, {0,alive,1}, {1,dead,0},{1,alive,0},{1,alive,1}]).
+%% 111/0 110/0 101/0 100/1 011/1 010/1 001/1 000/0
+%%         die = [{1,alive,1}, {1,alive,0}, {1,dead,1}, {0,dead,0}]}).
+-define(RULE30, [{0,dead,1}, {0,alive,0}, {0,alive,1}, {1,dead,0}]).
+%% 111/0 110/1 101/1 100/0 011/1 010/1 001/1 000/0
+%%	   die = {0,dead,0}, {1,alive,1}]}).
+-define(RULE110, [{0,dead,1}, {0,alive,0}, {0,alive,1}, {1,dead,1}, {1,alive,0}]).
+%% 111/1 110/0 101/1 100/1 011/1 010/0 001/0 000/0
+%%	   die = [{0,dead,0}, {0,dead,1}, {0,alive,0}, {1,alive,0}] }).
+-define(RULE184, [{0,alive,1}, {1,dead,0}, {1,dead,1}, {1,alive,1}]).
+
+%%
+%% 2-D Birth/Survive
+%% credits to Mirek Wojtowicz, http://www.mirekw.com/ca
+%%
+-define(CONWAY,         {[3], [2,3]}).
+-define(LIFE34,         {[3,4], [3,4]}).
+-define(HIGHLIFE,       {[3,6], [2,3]}).
+-define(DAYNIGHT,       {[3,6,7,8], [3,4,6,7,8]}).
+-define(CORAL,          {[3], [4,5,6,7,8]}).
+-define(COAGULATIONS,   {[3,7,8], [2,3,5,6,7,8]}).
+-define(ASSIMILATION,   {[3,4,5], [4,5,6,7]}).
+-define(AMOEBA,         {[3,5,7], [1,3,5,8]}).
+-define(BLOCKS2X2,      {[3,6], [1,2,5]}).
+-define(FLAKES,         {[3], [0,1,2,3,4,5,6,7,8]}).
+-define(GNARL,          {[1], [1]}).
+-define(LONGLIFE,       {[3,4,5], [5]}).
+-define(MAZE,           {[3], [1,2,3,4,5]}).
+-define(MAZECTRIC,      {[3], [1,2,3,4]}).
+-define(MOVE,           {[3,6,8], [2,4,5]}).
+-define(PSEUDOLIFE,     {[3,5,7], [2,3,8]}).
+-define(REPLICATOR,     {[1,3,5,7], [1,3,5,7]}).
+-define(STAINS,         {[3,6,7,8], [2,3,5,6,7,8]}).
+-define(WALLEDCITIES,   {[4,5,6,7,8], [2,3,4,5]}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% interesting seed patterns
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %% "still lifes"
 %%
@@ -72,8 +136,8 @@
 -define(BLSSE2,       %% block-laying switch engine 2
 	['2:2', '2:3', '2:4', '2:6', '3:2', '4:5', '4:6', 
 	 '5:3', '5:4', '5:6', '6:2', '6:4', '6:6']).
--define(LINEAR1,      %% 1-dimensional
-	['2:2', '2:3', '2:4', '2:5', '2:6', '2:7', '2:8', '2:9',
-	 '2:11', '2:12', '2:13', '2:14', '2:15', '2:19', '2:20', '2:21',
-	 '2:28', '2:29', '2:30', '2:31', '2:32', '2:33', '2:34',
-	 '2:36', '2:37', '2:38', '2:39', '2:40']).
+-define(LINEAR1,      %% 1-dimensional - dimensions [1, <<N>>, 1]
+	['0:2', '0:3', '0:4', '0:5', '0:6', '0:7', '0:8', '0:9',
+	 '0:11', '0:12', '0:13', '0:14', '0:15', '0:19', '0:20', '0:21',
+	 '0:28', '0:29', '0:30', '0:31', '0:32', '0:33', '0:34',
+	 '0:36', '0:37', '0:38', '0:39', '0:40']).

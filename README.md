@@ -2,25 +2,26 @@ gol
 ===
 Conway's Game of Life as an OTP-compliant application 
 
-Default world grid is 60 by 80 by 1 cells (i.e. a planar world), set in erlang environment variable:
-{dimensions, [60, 80, 1]}}. 
 
-Default rule set is Conway's 'B3/S23', set in erlang environment variable:
-{rules, {[3], [2, 3]}}. Much fun can be had changing those parameters to 
-make more hostile or more fecund environments. Rule changes take place between
-world creations - ie. the cells are not dynamically alterable once they're running.
+Start an Erlang shell from the gol/ root directory:
 
-Internally the server is almost ready to handle a three dimensional world, that 
-will be the next significant change outside of some minor bug fixes that need attention.
+	erl -pa ./ebin -gol
 
-Use application:set_env() in erlang shell or set env in shell invocation as, e.g.:
-
-	erl -pa ./ebin -gol dimensions "[Rows, Cols, Layers]" rules "{[Born], [Survive]}"
-
-From erlang shell, start the application:
+From the Erlang shell, start the application:
 
 	application:start(gol).
 	
+The default world grid is 60 by 80 by 1 cells (i.e. a 2-D planar world), set in erlang environment variable:
+{dimensions, [60, 80, 1]}}.  One-dimensional (i.e. linear) worlds are now supported, just set Rows to 1:
+{dimensions, [1, 80, 1]}}. 
+
+The default rule set is Conway's 'B3/S23', set in erlang environment variable:
+{rules, {[3], [2, 3]}}. 
+
+ A collection of predefined rules (see below) is now available via the new rules() function:
+
+	gol_server:rule(<<rule_name>>).
+
 Seed the world either with a custom-defined list of cells to activate:
 
 	gol_server:seed([ CellKey1, CellKey2, CellKey3, ...CellKeyN ]).
@@ -130,3 +131,66 @@ Methuselahs, mortal and otherwise:
        '2:11', '2:12', '2:13', '2:14', '2:15', '2:19', '2:20', '2:21',
        '2:28', '2:29', '2:30', '2:31', '2:32', '2:33', '2:34',
        '2:36', '2:37', '2:38', '2:39', '2:40']
+
+
+===
+
+Predefined rule sets:
+
+
+1-D rules, from Wolfram
+
+      rule90: 
+          live [{0,dead,1}, {0,alive,1}, {1,dead,0},{1,alive,0},{1,alive,1}]
+          die  [{0,dead,0}, {0,alive,0}, {1,dead,1}]
+      rule30:
+          live [{0,dead,1}, {0,alive,0}, {0,alive,1}, {1,dead,0}]
+          die  [{1,alive,1}, {1,alive,0}, {1,dead,1}, {0,dead,0}]
+      rule110:
+          live [{0,dead,1}, {0,alive,0}, {0,alive,1}, {1,dead,1}, {1,alive,0}]
+          die  [{0,dead,0}, {1,alive,1}]
+      rule184:
+          live [{0,alive,1}, {1,dead,0}, {1,dead,1}, {1,alive,1}]
+          die  [{0,dead,0}, {0,dead,1}, {0,alive,0}, {1,alive,0}]
+
+
+2-D rules, thanks to Mirek Wojtowicz, http://www.mirekw.com/ca:
+
+      conway:
+          {[3], [2,3]}
+      life34:
+          {[3,4], [3,4]}
+      highlife:
+          {[3,6], [2,3]}
+      daynight:
+          {[3,6,7,8], [3,4,6,7,8]}
+      coral:
+          {[3], [4,5,6,7,8]}
+      coagulations:
+          {[3,7,8], [2,3,5,6,7,8]}
+      assimilation:
+          {[3,4,5], [4,5,6,7]}
+      amoeba:
+          {[3,5,7], [1,3,5,8]}
+      blocks2x2:
+          {[3,6], [1,2,5]}
+      flakes:
+          {[3], [0,1,2,3,4,5,6,7,8]}
+      gnarl:
+          {[1], [1]}
+      longlife:
+          {[3,4,5], [5]}
+      maze:
+          {[3], [1,2,3,4,5]}
+      mazectric:
+          {[3], [1,2,3,4]}
+      move:
+          {[3,6,8], [2,4,5]}
+      pseudolife:
+          {[3,5,7], [2,3,8]}
+      replicator:
+          {[1,3,5,7], [1,3,5,7]}
+      stains:
+          {[3,6,7,8], [2,3,5,6,7,8]}
+      walledcities:
+          {[4,5,6,7,8], [2,3,4,5]}

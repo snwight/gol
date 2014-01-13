@@ -91,9 +91,9 @@ handle_call(find_neighbors, _From, State) ->
 	  end, NbrCells),
     {reply, ok, State#state{nbrs=NbrPids}};
 handle_call(predict, _From, State) ->
-    NbrSum = poll_neighbors(State#state.nbrs),
+    NbrState = poll_neighbors(State#state.nbrs),
     Predictor = State#state.predictor,
-    NewStatus = Predictor(State#state.status, NbrSum),
+    NewStatus = Predictor(State#state.status, NbrState),
     {reply, ok, State#state{pending=NewStatus}};
 handle_call(tick, _From, State) ->
     {reply, State#state.pending, State#state{status=State#state.pending}};
@@ -111,7 +111,7 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%% Internal functions
 %%%===================================================================
 -spec neighbors(record(), record()) -> list().
-neighbors(#cell{row=0, col=Col, layer=0}, #dims{cols=Cols, layers=0}) ->
+neighbors(#cell{row=0, col=Col, layer=0}, #dims{rows=1, cols=Cols, layers=1}) ->
     %% 1-D (linear) wraparound world, 2 neighbors
     ColL = if Col == 0 -> Cols; Col > 0 -> Col - 1 end,
     ColR = if Col == Cols -> 0; Col < Cols -> Col + 1 end,
@@ -173,6 +173,11 @@ poll_neighbors(Nbrs) ->
 		      alive -> 1
 		  end
 	  end, Nbrs),
+    process_neighbors(NbrState).
+
+process_neighbors(NbrState) when length(NbrState) == 2 -> 
+    NbrState;
+process_neighbors(NbrState) ->
     lists:foldl(fun(S, Sum) -> S + Sum end, 0, NbrState).
 
 %% A higher-order approach for rule designation:
@@ -180,7 +185,7 @@ poll_neighbors(Nbrs) ->
 %%     NewStateFunc = rule_func([3], [2, 3]).
 %% and utilize as:
 %%     NewState = NewStateFun(Status, Sum).
--spec rule_func(tuple()) -> 'dead' | 'alive'.
+-spec rule_func(tuple() | record()) -> any().
 rule_func({Born, Survive}) ->
     fun (dead, Sum) -> 
 	    case lists:member(Sum, Born) of
@@ -189,6 +194,13 @@ rule_func({Born, Survive}) ->
 	    end;
 	(alive, Sum) ->
 	    case lists:member(Sum, Survive) of
+		true -> alive;
+		false -> dead
+	    end
+    end;
+rule_func(Live) ->
+    fun (Status, [L, R]) ->
+	    case lists:member({L, Status, R}, Live) of
 		true -> alive;
 		false -> dead
 	    end
