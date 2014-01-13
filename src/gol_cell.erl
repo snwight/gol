@@ -185,7 +185,7 @@ process_neighbors(NbrState) ->
 %%     NewStateFunc = rule_func([3], [2, 3]).
 %% and utilize as:
 %%     NewState = NewStateFun(Status, Sum).
--spec rule_func(tuple() | record()) -> any().
+-spec rule_func(tuple() | list()) -> any().
 rule_func({Born, Survive}) ->
     fun (dead, Sum) -> 
 	    case lists:member(Sum, Born) of
