@@ -61,7 +61,7 @@ seed(Pos, blsse2)                  -> seed(Pos, ?BLSSE2);
 seed(Pos, linear1)                 -> seed(Pos, ?LINEAR1);
 seed(Pos, Spec) -> gen_server:call(gol_server, {seed, {Pos, Spec}}).
 
--spec rule(atom() | list()) -> ok.
+-spec rule(atom() | list() | tuple()) -> ok.
 rule(conway)                          -> rule(?CONWAY);
 rule(life34)                          -> rule(?LIFE34);
 rule(highlife)                        -> rule(?HIGHLIFE);
