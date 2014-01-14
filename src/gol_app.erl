@@ -18,13 +18,6 @@
 -spec start(term(), term()) -> {ok, pid()}.
 start(_StartType, _StartArgs) ->
     {ok, [Rows, Cols, Layers]} = application:get_env(gol, dimensions),
-    
-    case gol_sup:start_link(#dims{rows=Rows, cols=Cols, layers=Layers}) of
-	{ok, Pid} ->
-	    {ok, Pid};
-	Error ->
-	    Error
-		end.
+    gol_sup:start_link(#dims{rows=Rows, cols=Cols, layers=Layers}).
 
-stop(_State) ->
-    ok.
+stop(_State) -> ok.

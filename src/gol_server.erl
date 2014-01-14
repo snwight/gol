@@ -32,7 +32,8 @@
 -define(SERVER, ?MODULE). 
 -define(SAFE_BORDER, 5).
 
--record(state, {dims = #dims{} :: record(), world = [] :: list()}).
+-record(state, {dims = #dims{} :: any(), 
+		world = [] :: list()}).
 
 %%%===================================================================
 %%% API
@@ -167,25 +168,25 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
--spec add_layers(record()) -> list().
+-spec add_layers(any()) -> list().
 add_layers(Dims) -> 
     %% fugly -1 is because I want zero-origin planes
     add_layers(Dims#dims.rows - 1, 
 	       Dims#dims.cols - 1, 
 	       Dims#dims.layers - 1, Dims, []).
 
--spec add_layers(integer(), integer(), integer(), record(), list()) -> list().
+-spec add_layers(integer(), integer(), integer(), any(), list()) -> list().
 add_layers(_Row, _Col, -1, _Dims, World) -> World;
 add_layers(Row, Col, Layer, Dims, World) ->
     add_layers(Row, Col, Layer - 1, Dims, 
 	       [add_cells(Row, Col, Layer, Dims, []) | World]).
 
--spec add_cells(integer(), integer(), integer(), record(), list()) -> list().
+-spec add_cells(integer(), integer(), integer(), any(), list()) -> list().
 add_cells(-1, _Col, _Layer, _Dims, World) -> World;
 add_cells(Row, Col, Layer, Dims, World) -> 
     add_cells(Row - 1, Col, Layer, Dims, add_row(Row, Col, Layer, Dims, World)).
 
--spec add_row(integer(), integer(), integer(), record(), list()) -> list().
+-spec add_row(integer(), integer(), integer(), any(), list()) -> list().
 add_row(_Row, -1, _Layer, _Dims, World) -> World;
 add_row(Row, Col, Layer, Dims, World) ->
     %% create a new cell

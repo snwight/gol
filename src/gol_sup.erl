@@ -42,7 +42,7 @@
 %%%===================================================================
 %%% API functions
 %%%===================================================================
--spec start_link(list()) -> {ok, pid()}.
+-spec start_link(any()) -> {ok, pid()}.
 start_link(Dims) ->
     supervisor:start_link({local, gol_sup}, ?MODULE, Dims).
 

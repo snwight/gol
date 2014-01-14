@@ -42,8 +42,8 @@
 	  status = 'dead' :: 'alive' | 'dead',
 	  pending = 'dead' :: 'alive' | 'dead',
 	  predictor :: fun(),
-	  dims = #dims{} :: record(),
-	  cell = #cell{} :: record(),
+	  dims = #dims{} :: any(),
+	  cell = #cell{} :: any(),
 	  nbrs = [] :: list()
 	 }).
 
@@ -68,7 +68,7 @@ predict(CellKey) -> gen_server:call(CellKey, predict).
 -spec tick(atom()) -> 'dead' | 'alive'.
 tick(CellKey) -> gen_server:call(CellKey, tick).
 
--spec start_link(tuple()) -> {ok, pid()}.
+-spec start_link(list()) -> {ok, pid()} | ignore | {error, _}.
 start_link(Args=[#cell{row=Row, col=Col, layer=Layer}, _Dims]) ->
     gen_server:start_link({local, key({Row, Col, Layer})}, ?MODULE, Args, []).
 
@@ -110,7 +110,7 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
--spec neighbors(record(), record()) -> list().
+-spec neighbors(any(), any()) -> list().
 neighbors(#cell{row=0, col=Col, layer=0}, #dims{rows=1, cols=Cols, layers=1}) ->
     %% 1-D (linear) wraparound world, 2 neighbors
     ColL = if Col == 0 -> Cols; Col > 0 -> Col - 1 end,
